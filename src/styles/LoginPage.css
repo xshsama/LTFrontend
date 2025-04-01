@@ -1,0 +1,65 @@
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  /* background-color is now set dynamically in LoginPage.tsx using Ant Design tokens */
+  padding: 20px; /* Add some padding for smaller screens */
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  border-radius: 8px !important; /* Ensure border radius is applied */
+}
+
+/* Center the title - Ant Design's Title component handles styling */
+/* .login-card .ant-typography {
+  text-align: center;
+  margin-bottom: 24px !important;
+} */
+
+/* Style form items - Ant Design handles most of this */
+.login-form .ant-form-item-label > label {
+  font-weight: 500; /* Slightly bolder labels */
+  color: #555;
+}
+
+/* Style icons inside inputs */
+.site-form-item-icon {
+  color: rgba(0, 0, 0, 0.45); /* Standard Ant Design icon color */
+}
+
+/* Style the login button - Ant Design primary button styles are good */
+.login-form-button {
+  /* Ant Design's block and size props handle width and padding */
+  font-weight: 500 !important; /* Ensure font weight is applied */
+}
+
+/* Style the 'forgot password' link */
+.login-form-forgot {
+  color: #1890ff; /* Ant Design's primary color */
+}
+
+/* Adjust spacing for the 'remember me' and 'forgot password' line */
+.login-form .ant-form-item:nth-last-child(2) .ant-form-item-control-input-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Style the registration link area */
+.login-form .ant-form-item:last-child .ant-form-item-control-input-content > div {
+  color: rgba(0, 0, 0, 0.65); /* Standard text color */
+}
+
+.login-form .ant-form-item:last-child .ant-form-item-control-input-content > div a {
+  color: #1890ff; /* Ant Design's primary color */
+  font-weight: 500;
+}
+
+/* Ensure vertical layout spacing is consistent */
+.login-form .ant-form-item {
+  margin-bottom: 20px; /* Adjust spacing if needed */
+}

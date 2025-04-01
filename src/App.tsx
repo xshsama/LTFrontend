@@ -1,26 +1,109 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { ConfigProvider, theme as antdTheme } from 'antd' // Import ConfigProvider and theme
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from 'react-router-dom'
+import { ThemeProvider, useTheme } from './contexts/ThemeContext' // Import ThemeProvider and useTheme
+import MainLayout from './layouts/MainLayout'
+import Community from './pages/Community'
+import Courses from './pages/Courses'
+import Dashboard from './pages/Dashboard'
+import LoginPage from './pages/LoginPage' // Import LoginPage
+import Objectives from './pages/Objectives'
+import Progress from './pages/Progress'
+import Resources from './pages/Resources'
+import Settings from './pages/Settings'
+
+// Inner component to access theme context for ConfigProvider
+const ThemedApp: React.FC = () => {
+  const { theme } = useTheme() // Get theme from context
+
+  return (
+    <ConfigProvider
+      theme={{
+        // Use Ant Design's built-in dark or default algorithm based on context
+        algorithm:
+          theme === 'dark'
+            ? antdTheme.darkAlgorithm
+            : antdTheme.defaultAlgorithm,
+        // You can customize tokens further here if needed
+        // token: { colorPrimary: '#00b96b' },
+      }}
+    >
+      {/* Routes are now top-level to handle different layouts */}
+      <Routes>
+        <Route
+          path="/login"
+          element={<LoginPage />}
+        />
+        {/* Wrap protected routes within a parent route using MainLayout */}
+        <Route
+          path="/*" // Match all other paths for the main app layout
+          element={
+            <MainLayout>
+              <Routes>
+                {/* Existing routes nested under MainLayout, use relative paths */}
+                <Route
+                  path="dashboard"
+                  element={<Dashboard />}
+                />
+                <Route
+                  path="objectives"
+                  element={<Objectives />}
+                />
+                <Route
+                  path="courses"
+                  element={<Courses />}
+                />
+                <Route
+                  path="progress"
+                  element={<Progress />}
+                />
+                <Route
+                  path="resources"
+                  element={<Resources />}
+                />
+                <Route
+                  path="community"
+                  element={<Community />}
+                />
+                <Route
+                  path="settings"
+                  element={<Settings />}
+                />
+                {/* Default redirect for authenticated area */}
+                <Route
+                  path="/"
+                  element={
+                    <Navigate
+                      replace
+                      to="/dashboard"
+                    />
+                  }
+                />
+                {/* Add a fallback for unmatched routes within MainLayout if needed */}
+                {/* <Route path="*" element={<NotFoundPage />} /> */}
+              </Routes>
+            </MainLayout>
+          }
+        />
+      </Routes>
+    </ConfigProvider>
+  )
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <ThemeProvider>
+      {' '}
+      {/* Wrap everything with ThemeProvider */}
+      <Router>
+        <ThemedApp /> {/* Render the inner component */}
+      </Router>
+    </ThemeProvider>
+  )
 }
 
-export default App;
+export default App
