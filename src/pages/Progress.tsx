@@ -1,6 +1,7 @@
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
+  LoginOutlined,
   RiseOutlined,
 } from '@ant-design/icons'
 import {
@@ -9,15 +10,48 @@ import {
   Card,
   Col,
   Divider,
+  Result,
   Row,
   Statistic,
   Typography,
 } from 'antd'
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const { Title, Text } = Typography
 
 const Progress: React.FC = () => {
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+
+  // 处理登录按钮点击
+  const handleLogin = () => {
+    navigate('/login')
+  }
+
+  // 如果未登录，显示提示信息
+  if (!isAuthenticated) {
+    return (
+      <div style={{ padding: '24px 0' }}>
+        <Result
+          status="info"
+          title="查看学习进度"
+          subTitle="登录后可查看您的学习进度分析和学习报告"
+          extra={
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={handleLogin}
+            >
+              立即登录
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div>
       <Title
@@ -38,7 +72,7 @@ const Progress: React.FC = () => {
         >
           <Card
             title="总进度概览"
-            bordered={false}
+            styles={{ body: { padding: '20px' } }}
           >
             {/* Example overall progress */}
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
@@ -77,7 +111,7 @@ const Progress: React.FC = () => {
         >
           <Card
             title="时间投入分析"
-            bordered={false}
+            styles={{ body: { padding: '20px' } }}
           >
             <Statistic
               title="本周总学习时长"
@@ -90,7 +124,7 @@ const Progress: React.FC = () => {
               title="平均每日时长"
               value={2.1}
               precision={1}
-              valueStyle={{ fontSize: '16px', color: '#8c8c8c' }} // Smaller font for average
+              valueStyle={{ fontSize: '16px', color: '#8c8c8c' }}
               prefix={<ClockCircleOutlined />}
               suffix="小时"
               style={{ marginTop: '16px' }}
@@ -107,7 +141,7 @@ const Progress: React.FC = () => {
         >
           <Card
             title="效率与趋势"
-            bordered={false}
+            styles={{ body: { padding: '20px' } }}
           >
             <Statistic
               title="任务完成率 (本月)"
@@ -134,10 +168,10 @@ const Progress: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Detailed Reports Section (Placeholder) */}
+      {/* Detailed Reports Section */}
       <Card
         title="详细学习报告"
-        bordered={false}
+        styles={{ body: { padding: '20px' } }}
       >
         <p>这里可以生成或展示更详细的学习报告，例如按课程、按时间段等。</p>
         <Button type="link">生成周报</Button>

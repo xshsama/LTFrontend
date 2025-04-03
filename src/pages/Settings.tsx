@@ -1,5 +1,4 @@
 import {
-  BellOutlined,
   LockOutlined,
   MailOutlined,
   UploadOutlined,
@@ -8,7 +7,6 @@ import {
 import {
   Avatar,
   Button,
-  Divider,
   Form,
   Input,
   Select,
@@ -21,10 +19,9 @@ import {
 import React from 'react'
 
 const { Title } = Typography
-const { TabPane } = Tabs
 const { Option } = Select
 
-const Settings: React.FC = () => {
+const SettingsPage: React.FC = () => {
   // Placeholder handlers - implement actual logic later
   const onFinishAccount = (values: any) => {
     console.log('Account settings submitted:', values)
@@ -41,36 +38,17 @@ const Settings: React.FC = () => {
     // API call to update notification settings
   }
 
-  return (
-    <div>
-      <Title
-        level={2}
-        style={{ marginBottom: '24px' }}
-      >
-        设置
-      </Title>
-
-      <Tabs
-        defaultActiveKey="account"
-        tabPosition="left"
-      >
-        <TabPane
-          tab={
-            <span>
-              <UserOutlined /> 账户信息
-            </span>
-          }
-          key="account"
-        >
+  const tabItems = [
+    {
+      key: '1',
+      label: '个人资料',
+      children: (
+        <div className="settings-section">
           <Title level={4}>个人资料</Title>
           <Form
             layout="vertical"
             onFinish={onFinishAccount}
-            initialValues={
-              {
-                /* Fetch initial values */
-              }
-            }
+            initialValues={{}}
           >
             <Form.Item label="头像">
               <Space align="center">
@@ -78,11 +56,8 @@ const Settings: React.FC = () => {
                   size={64}
                   icon={<UserOutlined />}
                   src="https://joeschmoe.io/api/v1/random"
-                />{' '}
-                {/* Placeholder */}
+                />
                 <Upload>
-                  {' '}
-                  {/* Configure Upload component properly later */}
                   <Button icon={<UploadOutlined />}>更换头像</Button>
                 </Upload>
               </Space>
@@ -102,8 +77,7 @@ const Settings: React.FC = () => {
                 prefix={<MailOutlined />}
                 placeholder="your.email@example.com"
                 disabled
-              />{' '}
-              {/* Usually email is not editable directly */}
+              />
             </Form.Item>
             <Form.Item
               label="个人简介"
@@ -123,9 +97,14 @@ const Settings: React.FC = () => {
               </Button>
             </Form.Item>
           </Form>
-
-          <Divider />
-
+        </div>
+      ),
+    },
+    {
+      key: '2',
+      label: '账号设置',
+      children: (
+        <div className="settings-section">
           <Title level={4}>修改密码</Title>
           <Form
             layout="vertical"
@@ -182,15 +161,14 @@ const Settings: React.FC = () => {
               </Button>
             </Form.Item>
           </Form>
-        </TabPane>
-        <TabPane
-          tab={
-            <span>
-              <BellOutlined /> 通知设置
-            </span>
-          }
-          key="notifications"
-        >
+        </div>
+      ),
+    },
+    {
+      key: '3',
+      label: '通知设置',
+      children: (
+        <div className="settings-section">
           <Title level={4}>通知偏好</Title>
           <Form
             layout="vertical"
@@ -236,11 +214,20 @@ const Settings: React.FC = () => {
               </Button>
             </Form.Item>
           </Form>
-        </TabPane>
-        {/* Add more tabs as needed, e.g., 隐私设置, 学习偏好 */}
-      </Tabs>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <div className="settings-container">
+      <Title level={2}>设置</Title>
+      <Tabs
+        items={tabItems}
+        defaultActiveKey="1"
+      />
     </div>
   )
 }
 
-export default Settings
+export default SettingsPage

@@ -1,0 +1,115 @@
+.dashboard-container {
+  padding: 24px;
+}
+
+.dashboard-title {
+  margin-bottom: 24px !important;
+}
+
+.statistics-row {
+  margin-bottom: 32px;
+}
+
+.statistic-card {
+  height: 100%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.trend-indicator {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.trend-indicator.positive {
+  color: #3f8600;
+}
+
+.trend-indicator.negative {
+  color: #cf1322;
+}
+
+.section-title {
+  margin: 32px 0 24px !important;
+}
+
+.course-card {
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.goal-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.task-count {
+  margin-right: 16px;
+}
+
+.goal-progress {
+  width: 100px;
+}
+
+.tasks-list {
+  padding: 0 16px;
+}
+
+.task-item {
+  padding: 8px 0;
+}
+
+.task-name {
+  font-size: 14px;
+}
+
+.task-deadline {
+  font-size: 12px;
+}
+
+.empty-state-card {
+  padding: 48px;
+  text-align: center;
+}
+
+.no-goals-message,
+.no-tasks-message {
+  padding: 16px;
+  text-align: center;
+}
+
+.course-collapse {
+  border: none;
+  background: transparent;
+}
+
+.goal-panel {
+  border: none;
+  margin-bottom: 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+
+  .statistics-row {
+    margin-bottom: 24px;
+  }
+
+  .goal-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .task-count {
+    margin: 8px 0;
+  }
+
+  .goal-progress {
+    width: 100%;
+  }
+}

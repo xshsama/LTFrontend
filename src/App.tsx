@@ -5,6 +5,7 @@ import {
   BrowserRouter as Router,
   Routes,
 } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext' // 导入AuthProvider
 import { ThemeProvider, useTheme } from './contexts/ThemeContext' // Import ThemeProvider and useTheme
 import MainLayout from './layouts/MainLayout'
 import Community from './pages/Community'
@@ -12,6 +13,7 @@ import Courses from './pages/Courses'
 import Dashboard from './pages/Dashboard'
 import LoginPage from './pages/LoginPage' // Import LoginPage
 import Objectives from './pages/Objectives'
+import ProfilePage from './pages/ProfilePage' // 导入个人资料页面
 import Progress from './pages/Progress'
 import Resources from './pages/Resources'
 import Settings from './pages/Settings'
@@ -70,6 +72,10 @@ const ThemedApp: React.FC = () => {
                   element={<Community />}
                 />
                 <Route
+                  path="profile"
+                  element={<ProfilePage />}
+                />
+                <Route
                   path="settings"
                   element={<Settings />}
                 />
@@ -97,11 +103,13 @@ const ThemedApp: React.FC = () => {
 function App() {
   return (
     <ThemeProvider>
-      {' '}
-      {/* Wrap everything with ThemeProvider */}
-      <Router>
-        <ThemedApp /> {/* Render the inner component */}
-      </Router>
+      <AuthProvider>
+        {' '}
+        {/* 添加 AuthProvider */}
+        <Router>
+          <ThemedApp /> {/* Render the inner component */}
+        </Router>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

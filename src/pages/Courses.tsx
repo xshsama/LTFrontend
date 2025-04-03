@@ -2,77 +2,28 @@ import {
   BookOutlined,
   DeleteOutlined,
   EditOutlined,
+  LoginOutlined,
   PlusOutlined,
 } from '@ant-design/icons'
-import { Button, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { Button, Result, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const { Title } = Typography
 
 // Define Course interface
 export interface Course {
-  // Added export
-  id: string // Added id for linking
+  id: string
   key: string
   name: string
-  category: string // e.g., '编程', '语言', '设计'
-  relatedGoalsCount: number // Number of goals linked to this course
-  relatedTasksCount: number // Number of tasks linked to this course
+  category: string
+  relatedGoalsCount: number
+  relatedTasksCount: number
   tags?: string[]
 }
 
-// Example data
-/* // Commenting out mock data
-export const courseData: Course[] = [
-  // Added export
-  {
-    id: 'course-1', // Added id
-    key: '1',
-    name: 'React 深度学习',
-    category: '编程',
-    relatedGoalsCount: 2,
-    relatedTasksCount: 5,
-    tags: ['前端', 'JavaScript', '框架'],
-  },
-  {
-    id: 'course-2', // Added id
-    key: '2',
-    name: '高级英语写作',
-    category: '语言',
-    relatedGoalsCount: 1,
-    relatedTasksCount: 3,
-    tags: ['英语', '写作'],
-  },
-  {
-    id: 'course-3', // Added id
-    key: '3',
-    name: 'UI/UX 设计基础',
-    category: '设计',
-    relatedGoalsCount: 0,
-    relatedTasksCount: 2,
-    tags: ['设计', '用户体验'],
-  },
-  {
-    id: 'course-4', // Added id
-    key: '4',
-    name: '数据结构与算法',
-    category: '编程',
-    relatedGoalsCount: 1, // Example count
-    relatedTasksCount: 4, // Example count
-    tags: ['算法', '基础'],
-  },
-  {
-    id: 'course-5', // Added id
-    key: '5',
-    name: '商务英语口语',
-    category: '语言',
-    relatedGoalsCount: 1, // Example count
-    relatedTasksCount: 2, // Example count
-    tags: ['英语', '口语', '商务'],
-  },
-];
-*/
 export const courseData: Course[] = [] // Provide an empty array
 
 // Define table columns
@@ -86,14 +37,13 @@ const courseColumns: ColumnsType<Course> = [
         <BookOutlined style={{ marginRight: 8 }} />
         {text}
       </a>
-    ), // Add icon and make clickable
+    ),
   },
   {
     title: '分类',
     dataIndex: 'category',
     key: 'category',
     filters: [
-      // Example filters based on data
       { text: '编程', value: '编程' },
       { text: '语言', value: '语言' },
       { text: '设计', value: '设计' },
@@ -151,6 +101,36 @@ const courseColumns: ColumnsType<Course> = [
 ]
 
 const Courses: React.FC = () => {
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+
+  // 处理登录按钮点击
+  const handleLogin = () => {
+    navigate('/login')
+  }
+
+  // 如果未登录，显示提示信息
+  if (!isAuthenticated) {
+    return (
+      <div style={{ padding: '24px 0' }}>
+        <Result
+          status="info"
+          title="课程与科目管理"
+          subTitle="登录后可查看和管理您的课程和科目"
+          extra={
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={handleLogin}
+            >
+              立即登录
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div>
       <div

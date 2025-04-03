@@ -1,399 +1,219 @@
-import {
-  DeleteOutlined,
-  EditOutlined,
-  LinkOutlined,
-  PlusOutlined,
-} from '@ant-design/icons'
-import { Button, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
-import type { ColumnsType } from 'antd/es/table'
-import React from 'react'
+import { LoginOutlined, PlusOutlined } from '@ant-design/icons'
+import { Button, Modal, Result, Space, Tabs, Typography, message } from 'antd'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { v4 as uuidv4 } from 'uuid'
+import GoalForm from '../components/forms/GoalForm'
+import TaskForm from '../components/forms/TaskForm'
+import AchievementsTable from '../components/tables/AchievementsTable'
+import GoalsTable from '../components/tables/GoalsTable'
+import TasksTable from '../components/tables/TasksTable'
+import { useAuth } from '../contexts/AuthContext'
+import { mockAchievementData, mockGoalData, mockTaskData } from '../mock/data'
+import { Achievement, Goal, Task } from '../types/goals'
 
 const { Title } = Typography
-const { TabPane } = Tabs
 
-// --- Goal Definition ---
-export interface Goal {
-  id: string
-  key: string
-  name: string
-  deadline: string
-  priority: '高' | '中' | '低'
-  status: '进行中' | '未开始' | '已完成'
-  tags: string[]
-  courseId: string
-}
+const ObjectivesPage: React.FC = () => {
+  const { isAuthenticated } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [goals, setGoals] = useState<Goal[]>(mockGoalData)
+  const [tasks, setTasks] = useState<Task[]>(mockTaskData)
+  const [achievements, setAchievements] =
+    useState<Achievement[]>(mockAchievementData)
+  const navigate = useNavigate()
 
-/* // Commenting out mock data
-export const goalData: Goal[] = [
-  {
-    id: 'goal-1',
-    key: '1',
-    name: '完成 React 进阶教程',
-    deadline: '2025-04-15',
-    priority: '高',
-    status: '进行中',
-    tags: ['React', '前端'],
-    courseId: 'course-1',
-  },
-  {
-    id: 'goal-2',
-    key: '2',
-    name: '学习 TypeScript 类型系统',
-    deadline: '2025-04-30',
-    priority: '中',
-    status: '未开始',
-    tags: ['TypeScript', '编程基础'],
-    courseId: 'course-1',
-  },
-  {
-    id: 'goal-3',
-    key: '3',
-    name: '阅读《设计模式》前五章',
-    deadline: '2025-05-10',
-    priority: '低',
-    status: '未开始',
-    tags: ['软件设计', '理论'],
-    courseId: 'course-generic',
-  }, // Assuming a generic course exists or add one
-  {
-    id: 'goal-4',
-    key: '4',
-    name: '掌握常用排序算法',
-    deadline: '2025-05-20',
-    priority: '高',
-    status: '进行中',
-    tags: ['算法', '数据结构'],
-    courseId: 'course-4',
-  }, // Linked to new course
-  {
-    id: 'goal-5',
-    key: '5',
-    name: '完成商务邮件模拟写作',
-    deadline: '2025-04-25',
-    priority: '中',
-    status: '未开始',
-    tags: ['英语', '写作', '商务'],
-    courseId: 'course-5',
-  }, // Linked to new course
-];
-*/
-export const goalData: Goal[] = [] // Provide an empty array
+  // 添加新的状态变量，用于控制模态框的显示
+  const [goalModalVisible, setGoalModalVisible] = useState(false)
+  const [taskModalVisible, setTaskModalVisible] = useState(false)
+  const [formSubmitting, setFormSubmitting] = useState(false)
 
-const goalColumns: ColumnsType<Goal> = [
-  {
-    title: '目标名称',
-    dataIndex: 'name',
-    key: 'name',
-    render: (text: string) => <a>{text}</a>,
-  },
-  { title: '截止日期', dataIndex: 'deadline', key: 'deadline' },
-  {
-    title: '优先级',
-    dataIndex: 'priority',
-    key: 'priority',
-    render: (priority: Goal['priority']) => {
-      let color =
-        priority === '高' ? 'volcano' : priority === '中' ? 'geekblue' : 'green'
-      return <Tag color={color}>{priority}</Tag>
-    },
-  },
-  {
-    title: '状态',
-    key: 'status',
-    dataIndex: 'status',
-    render: (status: Goal['status']) => {
-      let color = status === '进行中' ? 'processing' : 'default'
-      if (status === '已完成') color = 'success'
-      return <Tag color={color}>{status}</Tag>
-    },
-  },
-  {
-    title: '标签',
-    key: 'tags',
-    dataIndex: 'tags',
-    render: (tags: string[]) => (
-      <>
-        {' '}
-        {tags.map((tag) => {
-          let color = tag.length > 5 ? 'geekblue' : 'green'
-          if (tag === 'React') color = 'blue'
-          return (
-            <Tag
-              color={color}
-              key={tag}
+  // 处理登录按钮点击
+  const handleLogin = () => {
+    navigate('/login')
+  }
+
+  // 处理添加目标的逻辑
+  const handleAddGoal = () => {
+    setGoalModalVisible(true)
+  }
+
+  // 处理添加任务的逻辑
+  const handleAddTask = () => {
+    setTaskModalVisible(true)
+  }
+
+  // 处理目标表单提交
+  const handleGoalFormSubmit = async (values: Omit<Goal, 'id' | 'key'>) => {
+    setFormSubmitting(true)
+    try {
+      // 在实际应用中，这里应该调用 API 来保存数据
+      // 这里为了演示，我们直接在前端模拟添加
+      const newGoal: Goal = {
+        ...values,
+        id: uuidv4(),
+        key: uuidv4(),
+      }
+
+      // 更新状态
+      setGoals([newGoal, ...goals])
+
+      // 关闭模态框
+      setGoalModalVisible(false)
+      message.success('学习目标添加成功！')
+    } catch (error) {
+      console.error('添加目标失败:', error)
+      message.error('添加目标失败，请重试！')
+    } finally {
+      setFormSubmitting(false)
+    }
+  }
+
+  // 处理任务表单提交
+  const handleTaskFormSubmit = async (values: Omit<Task, 'key'>) => {
+    setFormSubmitting(true)
+    try {
+      // 在实际应用中，这里应该调用 API 来保存数据
+      // 这里为了演示，我们直接在前端模拟添加
+      const newTask: Task = {
+        ...values,
+        key: uuidv4(),
+      }
+
+      // 更新状态
+      setTasks([newTask, ...tasks])
+
+      // 关闭模态框
+      setTaskModalVisible(false)
+      message.success('任务添加成功！')
+    } catch (error) {
+      console.error('添加任务失败:', error)
+      message.error('添加任务失败，请重试！')
+    } finally {
+      setFormSubmitting(false)
+    }
+  }
+
+  // 如果未登录，显示提示信息
+  if (!isAuthenticated) {
+    return (
+      <div className="objectives-container">
+        <Result
+          status="info"
+          title="请先登录"
+          subTitle="登录后即可查看和管理您的学习目标、任务和成就"
+          extra={
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={handleLogin}
             >
-              {' '}
-              {tag.toUpperCase()}{' '}
-            </Tag>
-          )
-        })}{' '}
-      </>
-    ),
-  },
-  {
-    title: '操作',
-    key: 'action',
-    render: (_: any, record: Goal) => (
-      <Space size="middle">
-        {' '}
-        <a>编辑</a> <a>删除</a>{' '}
-      </Space>
-    ),
-  },
-]
+              立即登录
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
 
-// --- Task Definition ---
-export interface Task {
-  key: string
-  name: string
-  deadline: string
-  priority: '高' | '中' | '低'
-  status: '进行中' | '未开始' | '已完成'
-  relatedGoal: string
-  goalId: string
-  tags: string[]
-}
-
-/* // Commenting out mock data
-export const taskData: Task[] = [
-  {
-    key: '1',
-    name: '设置 React Router',
-    deadline: '2025-04-01',
-    priority: '高',
-    status: '进行中',
-    relatedGoal: '完成 React 进阶教程',
-    goalId: 'goal-1',
-    tags: ['React', 'Setup'],
-  },
-  {
-    key: '2',
-    name: '学习泛型用法',
-    deadline: '2025-04-05',
-    priority: '中',
-    status: '未开始',
-    relatedGoal: '学习 TypeScript 类型系统',
-    goalId: 'goal-2',
-    tags: ['TypeScript'],
-  },
-  {
-    key: '3',
-    name: '实现状态管理 (Context API)',
-    deadline: '2025-04-10',
-    priority: '高',
-    status: '未开始',
-    relatedGoal: '完成 React 进阶教程',
-    goalId: 'goal-1',
-    tags: ['React', 'State Management'],
-  },
-  {
-    key: '4',
-    name: '阅读单例模式章节',
-    deadline: '2025-04-08',
-    priority: '低',
-    status: '未开始',
-    relatedGoal: '阅读《设计模式》前五章',
-    goalId: 'goal-3',
-    tags: ['Design Pattern'],
-  },
-  {
-    key: '5',
-    name: '实现快速排序',
-    deadline: '2025-04-18',
-    priority: '高',
-    status: '未开始',
-    relatedGoal: '掌握常用排序算法',
-    goalId: 'goal-4',
-    tags: ['算法', '实现'],
-  },
-  {
-    key: '6',
-    name: '学习冒泡排序原理',
-    deadline: '2025-04-12',
-    priority: '中',
-    status: '进行中',
-    relatedGoal: '掌握常用排序算法',
-    goalId: 'goal-4',
-    tags: ['算法', '理论'],
-  },
-  {
-    key: '7',
-    name: '完成产品介绍邮件草稿',
-    deadline: '2025-04-20',
-    priority: '中',
-    status: '未开始',
-    relatedGoal: '完成商务邮件模拟写作',
-    goalId: 'goal-5',
-    tags: ['写作', '商务'],
-  },
-  {
-    key: '8',
-    name: '复习 Hooks useMemo',
-    deadline: '2025-04-03',
-    priority: '高',
-    status: '已完成',
-    relatedGoal: '完成 React 进阶教程',
-    goalId: 'goal-1',
-    tags: ['React', 'Hooks'],
-  }, // Added completed task
-];
-*/
-export const taskData: Task[] = [] // Provide an empty array
-
-const taskColumns: ColumnsType<Task> = [
-  { title: '任务名称', dataIndex: 'name', key: 'name' },
-  {
-    title: '关联目标',
-    dataIndex: 'relatedGoal',
-    key: 'relatedGoal',
-    render: (goal: string, record: Task) =>
-      goal ? (
-        <Tooltip title={goal}>
-          <LinkOutlined />
-        </Tooltip>
-      ) : (
-        '-'
+  const tabItems = [
+    {
+      key: 'goals',
+      label: '学习目标',
+      children: (
+        <GoalsTable
+          data={goals}
+          loading={loading}
+        />
       ),
-  },
-  {
-    title: '截止日期',
-    dataIndex: 'deadline',
-    key: 'deadline',
-    sorter: (a: any, b: any) =>
-      new Date(a.deadline).getTime() - new Date(b.deadline).getTime(),
-  },
-  {
-    title: '优先级',
-    dataIndex: 'priority',
-    key: 'priority',
-    filters: [
-      { text: '高', value: '高' },
-      { text: '中', value: '中' },
-      { text: '低', value: '低' },
-    ],
-    onFilter: (value: React.Key | boolean, record: Task) =>
-      record.priority === value,
-    render: (priority: Task['priority']) => {
-      let color =
-        priority === '高' ? 'volcano' : priority === '中' ? 'geekblue' : 'green'
-      return <Tag color={color}>{priority}</Tag>
     },
-  },
-  {
-    title: '状态',
-    key: 'status',
-    dataIndex: 'status',
-    filters: [
-      { text: '进行中', value: '进行中' },
-      { text: '未开始', value: '未开始' },
-      { text: '已完成', value: '已完成' },
-    ],
-    onFilter: (value: React.Key | boolean, record: Task) =>
-      record.status === value,
-    render: (status: Task['status']) => {
-      let color =
-        status === '进行中'
-          ? 'processing'
-          : status === '已完成'
-          ? 'success'
-          : 'default'
-      return <Tag color={color}>{status}</Tag>
+    {
+      key: 'tasks',
+      label: '任务清单',
+      children: (
+        <TasksTable
+          data={tasks}
+          loading={loading}
+        />
+      ),
     },
-  }, // Updated status render and filter
-  {
-    title: '操作',
-    key: 'action',
-    render: (_: any, record: Task) => (
-      <Space size="middle">
-        {' '}
-        <Tooltip title="编辑">
-          <Button
-            shape="circle"
-            icon={<EditOutlined />}
-          />
-        </Tooltip>{' '}
-        <Tooltip title="删除">
-          <Button
-            shape="circle"
-            icon={<DeleteOutlined />}
-            danger
-          />
-        </Tooltip>{' '}
-      </Space>
-    ),
-  },
-]
+    {
+      key: 'achievements',
+      label: '完成情况',
+      children: (
+        <AchievementsTable
+          data={achievements}
+          loading={loading}
+        />
+      ),
+    },
+  ]
 
-// --- Combined Component ---
-const Objectives: React.FC = () => {
   return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '24px',
-        }}
-      >
+    <div className="objectives-container">
+      <div className="objectives-header">
         <Title
           level={2}
           style={{ marginBottom: 0 }}
         >
-          {' '}
-          目标与任务{' '}
+          目标与任务
         </Title>
+        <Space>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAddGoal}
+          >
+            添加目标
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={handleAddTask}
+          >
+            添加任务
+          </Button>
+        </Space>
       </div>
-      <Tabs defaultActiveKey="goals">
-        <TabPane
-          tab="学习目标"
-          key="goals"
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              marginBottom: '16px',
-            }}
-          >
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-            >
-              创建新目标
-            </Button>
-          </div>
-          <Table
-            columns={goalColumns}
-            dataSource={goalData} // Now uses the empty array
-          />
-        </TabPane>
-        <TabPane
-          tab="任务管理"
-          key="tasks"
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              marginBottom: '16px',
-            }}
-          >
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-            >
-              创建新任务
-            </Button>
-          </div>
-          <Table
-            columns={taskColumns}
-            dataSource={taskData} // Now uses the empty array
-          />
-        </TabPane>
-      </Tabs>
+      <Tabs
+        defaultActiveKey="goals"
+        items={tabItems}
+        style={{ marginTop: '24px' }}
+      />
+
+      {/* 添加目标的模态框 */}
+      <Modal
+        title="添加学习目标"
+        open={goalModalVisible}
+        onCancel={() => setGoalModalVisible(false)}
+        footer={null}
+        destroyOnClose={true}
+        maskClosable={false}
+      >
+        <GoalForm
+          onFinish={handleGoalFormSubmit}
+          onCancel={() => setGoalModalVisible(false)}
+          loading={formSubmitting}
+        />
+      </Modal>
+
+      {/* 添加任务的模态框 */}
+      <Modal
+        title="添加任务"
+        open={taskModalVisible}
+        onCancel={() => setTaskModalVisible(false)}
+        footer={null}
+        destroyOnClose={true}
+        maskClosable={false}
+      >
+        <TaskForm
+          goals={goals}
+          onFinish={handleTaskFormSubmit}
+          onCancel={() => setTaskModalVisible(false)}
+          loading={formSubmitting}
+        />
+      </Modal>
     </div>
   )
 }
 
-export default Objectives
+export default ObjectivesPage

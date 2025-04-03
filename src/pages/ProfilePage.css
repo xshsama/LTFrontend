@@ -1,0 +1,77 @@
+.profile-page {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 20px;
+}
+
+.profile-avatar-container {
+  position: relative;
+  margin-right: 24px;
+}
+
+.avatar-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+
+.avatar-overlay:hover {
+  opacity: 1;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-meta {
+  margin-bottom: 16px;
+}
+
+.user-level {
+  margin-bottom: 8px;
+}
+
+.user-stats {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.user-stats span {
+  margin-right: 8px;
+}
+
+.achievement-card {
+  display: flex;
+  align-items: center;
+}
+
+.achievement-icon {
+  margin-right: 16px;
+}
+
+.achievement-content {
+  flex: 1;
+}
+
+.achievement-points {
+  margin-top: 8px;
+  font-weight: bold;
+  color: #faad14;
+}
+
+.level-info {
+  text-align: center;
+}
+
+/* 支持暗色模式 */
+.dark-theme .user-stats {
+  color: rgba(255, 255, 255, 0.45);
+}

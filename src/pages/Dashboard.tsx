@@ -4,35 +4,39 @@ import {
   BookOutlined,
   CheckSquareOutlined,
   ClockCircleOutlined,
+  LoginOutlined,
 } from '@ant-design/icons'
 import {
-  Progress as AntProgress, // Import Empty component
+  Progress as AntProgress,
   Button,
   Card,
   Col,
   Collapse,
   Empty,
   List,
+  Result,
   Row,
   Space,
   Statistic,
   Tag,
   Typography,
 } from 'antd'
-import React from 'react'
-import { Link } from 'react-router-dom' // Import Link for the button
-// Import data structures and data
-import { Course, courseData } from './Courses'
-import { Goal, goalData, Task, taskData } from './Objectives'
+import React, { useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { mockCourseData, mockGoalData, mockTaskData } from '../mock/data'
+import { Course } from '../types/course'
+import { Goal, Task } from '../types/goals'
+import './Dashboard.css'
 
 const { Title, Text } = Typography
-const { Panel } = Collapse
 
 // Helper function to find related items
-const findGoalsForCourse = (courseId: string) =>
-  goalData.filter((g) => g.courseId === courseId)
-const findTasksForGoal = (goalId: string) =>
-  taskData.filter((t) => t.goalId === goalId)
+const findGoalsForCourse = (courseId: string): Goal[] =>
+  mockGoalData.filter((g) => g.courseId === courseId)
+
+const findTasksForGoal = (goalId: string): Task[] =>
+  mockTaskData.filter((t) => t.goalId === goalId)
 
 // Helper to render Goal Panel Header with progress
 const renderGoalPanelHeader = (goal: Goal) => {
@@ -40,27 +44,21 @@ const renderGoalPanelHeader = (goal: Goal) => {
   const completedTasks = tasks.filter((t) => t.status === '已完成').length
   const progressPercent =
     tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        width: '100%',
-      }}
-    >
+    <div className="goal-panel-header">
       <Text strong>{goal.name}</Text>
       <Space>
         <Text
           type="secondary"
-          style={{ fontSize: '12px' }}
+          className="task-count"
         >
           {completedTasks}/{tasks.length} 任务
         </Text>
         <AntProgress
           percent={progressPercent}
           size="small"
-          style={{ width: 100 }}
+          className="goal-progress"
           status={progressPercent === 100 ? 'success' : 'normal'}
           showInfo={false}
         />
@@ -69,27 +67,160 @@ const renderGoalPanelHeader = (goal: Goal) => {
   )
 }
 
-const Dashboard: React.FC = () => {
-  // Example: Filter for active courses (can be adjusted based on real logic)
-  // For testing the Empty state, temporarily set activeCourses to empty array:
-  // const activeCourses: Course[] = [];
-  const activeCourseIds = new Set(
-    goalData.filter((g) => g.status === '进行中').map((g) => g.courseId),
-  )
-  const activeCourses = courseData.filter((c) => activeCourseIds.has(c.id))
+// 抽取目标任务列表为单独的组件
+const GoalTasks: React.FC<{ goal: Goal }> = ({ goal }) => {
+  const goalTasks = findTasksForGoal(goal.id)
+
+  if (goalTasks.length === 0) {
+    return (
+      <div className="no-tasks-message">
+        <Text type="secondary">该目标下暂无任务</Text>
+      </div>
+    )
+  }
 
   return (
-    <div>
+    <List
+      size="small"
+      dataSource={goalTasks}
+      className="tasks-list"
+      renderItem={(task: Task) => (
+        <List.Item className="task-item">
+          <List.Item.Meta
+            title={
+              <Text
+                delete={task.status === '已完成'}
+                className="task-name"
+              >
+                {task.name}
+              </Text>
+            }
+            description={
+              <Text
+                type="secondary"
+                className="task-deadline"
+              >
+                截止: {task.deadline}
+              </Text>
+            }
+          />
+          <Tag
+            color={
+              task.status === '进行中'
+                ? 'processing'
+                : task.status === '已完成'
+                ? 'success'
+                : 'default'
+            }
+          >
+            {task.status}
+          </Tag>
+        </List.Item>
+      )}
+    />
+  )
+}
+
+// 抽取课程内容为单独的组件以提高可维护性
+const CourseContent: React.FC<{ course: Course }> = ({ course }) => {
+  const courseGoals = findGoalsForCourse(course.id)
+
+  if (courseGoals.length === 0) {
+    return (
+      <div className="no-goals-message">
+        <Text type="secondary">该课程下暂无目标</Text>
+      </div>
+    )
+  }
+
+  const collapseItems = courseGoals.map((goal: Goal) => ({
+    key: goal.id,
+    label: renderGoalPanelHeader(goal),
+    children: <GoalTasks goal={goal} />,
+    className: 'goal-panel',
+  }))
+
+  return (
+    <Collapse
+      accordion
+      ghost
+      className="course-collapse"
+      items={collapseItems}
+    />
+  )
+}
+
+const Dashboard: React.FC = () => {
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+
+  // 使用 useMemo 优化数据计算
+  const { activeCourses, statistics } = useMemo(() => {
+    const activeCourseIds = new Set(
+      mockGoalData.filter((g) => g.status === '进行中').map((g) => g.courseId),
+    )
+
+    const inProgressTasks = mockTaskData.filter(
+      (t) => t.status === '进行中',
+    ).length
+    const totalGoals = mockGoalData.length
+    const completedGoals = mockGoalData.filter(
+      (g) => g.status === '已完成',
+    ).length
+    const completionRate =
+      totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0
+
+    return {
+      activeCourses: mockCourseData.filter((c) => activeCourseIds.has(c.id)),
+      statistics: {
+        inProgressTasks,
+        completionRate,
+        activeCourseCount: mockCourseData.filter((c) => c.status === '进行中')
+          .length,
+      },
+    }
+  }, []) // 依赖数组为空，因为目前使用的是静态数据
+
+  // 处理登录按钮点击
+  const handleLogin = () => {
+    navigate('/login')
+  }
+
+  // 如果未登录，显示提示信息
+  if (!isAuthenticated) {
+    return (
+      <div className="dashboard-container">
+        <Result
+          status="info"
+          title="欢迎使用学习跟踪平台"
+          subTitle="请先登录查看您的学习数据和进度"
+          extra={
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={handleLogin}
+            >
+              立即登录
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="dashboard-container">
       <Title
         level={2}
-        style={{ marginBottom: '32px' }}
+        className="dashboard-title"
       >
         仪表盘
       </Title>
-      {/* Statistics Row */}
+
+      {/* 统计卡片行 */}
       <Row
         gutter={[24, 24]}
-        style={{ marginBottom: '32px' }}
+        className="statistics-row"
       >
         <Col
           xs={24}
@@ -97,16 +228,10 @@ const Dashboard: React.FC = () => {
           md={12}
           lg={6}
         >
-          <Card
-            bordered={false}
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
-              borderRadius: '8px',
-            }}
-          >
+          <Card className="statistic-card">
             <Statistic
               title="进行中的任务"
-              value={taskData.filter((t) => t.status === '进行中').length}
+              value={statistics.inProgressTasks}
               prefix={<CheckSquareOutlined />}
             />
           </Card>
@@ -117,13 +242,7 @@ const Dashboard: React.FC = () => {
           md={12}
           lg={6}
         >
-          <Card
-            bordered={false}
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
-              borderRadius: '8px',
-            }}
-          >
+          <Card className="statistic-card">
             <Statistic
               title="今日专注时长"
               value={2.5}
@@ -134,14 +253,9 @@ const Dashboard: React.FC = () => {
             />
             <Text
               type="secondary"
-              style={{
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                marginTop: '8px',
-              }}
+              className="trend-indicator negative"
             >
-              <ArrowDownOutlined style={{ color: 'red', marginRight: '4px' }} />
+              <ArrowDownOutlined />
               <span>较昨日 -15%</span>
             </Text>
           </Card>
@@ -152,42 +266,19 @@ const Dashboard: React.FC = () => {
           md={12}
           lg={6}
         >
-          <Card
-            bordered={false}
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
-              borderRadius: '8px',
-            }}
-          >
-            {(() => {
-              const totalGoals = goalData.length
-              const completedGoals = goalData.filter(
-                (g) => g.status === '已完成',
-              ).length
-              const completionRate =
-                totalGoals > 0
-                  ? Math.round((completedGoals / totalGoals) * 100)
-                  : 0
-              return (
-                <Statistic
-                  title="目标完成率"
-                  value={completionRate}
-                  valueStyle={{ color: '#3f8600' }}
-                  prefix={<ArrowUpOutlined />}
-                  suffix="%"
-                />
-              )
-            })()}
+          <Card className="statistic-card">
+            <Statistic
+              title="目标完成率"
+              value={statistics.completionRate}
+              valueStyle={{ color: '#3f8600' }}
+              prefix={<ArrowUpOutlined />}
+              suffix="%"
+            />
             <Text
               type="secondary"
-              style={{
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                marginTop: '8px',
-              }}
+              className="trend-indicator positive"
             >
-              <ArrowUpOutlined style={{ color: 'green', marginRight: '4px' }} />
+              <ArrowUpOutlined />
               <span>较上周 +10%</span>
             </Text>
           </Card>
@@ -198,149 +289,52 @@ const Dashboard: React.FC = () => {
           md={12}
           lg={6}
         >
-          <Card
-            bordered={false}
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
-              borderRadius: '8px',
-            }}
-          >
+          <Card className="statistic-card">
             <Statistic
               title="活跃课程数"
-              value={courseData.length}
+              value={statistics.activeCourseCount}
               prefix={<BookOutlined />}
             />
           </Card>
         </Col>
       </Row>
-      {/* Course Cards Section */}
+
+      {/* 课程进度部分 */}
       <Title
         level={3}
-        style={{ marginBottom: '24px' }}
+        className="section-title"
       >
         课程进度
       </Title>
       <Row gutter={[24, 24]}>
         {activeCourses.length > 0 ? (
-          activeCourses.map((course: Course) => {
-            const courseGoals = findGoalsForCourse(course.id)
-            return (
-              <Col
-                xs={24}
-                md={12}
-                lg={12}
-                key={course.id}
-              >
-                <Card
-                  title={
-                    <Title
-                      level={5}
-                      style={{ margin: 0 }}
-                    >
-                      {course.name}
-                    </Title>
-                  }
-                  bordered={false}
-                  headStyle={{
+          activeCourses.map((course: Course) => (
+            <Col
+              xs={24}
+              md={12}
+              lg={12}
+              key={course.id}
+            >
+              <Card
+                className="course-card"
+                title={<Title level={5}>{course.name}</Title>}
+                styles={{
+                  header: {
                     backgroundColor: '#fafafa',
                     borderBottom: '1px solid #f0f0f0',
-                  }}
-                  bodyStyle={{ padding: '0' }}
-                  style={{
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
-                    borderRadius: '8px',
-                    marginBottom: '24px',
-                  }}
-                >
-                  {courseGoals.length > 0 ? (
-                    <Collapse
-                      accordion
-                      ghost
-                      style={{ borderRadius: '0 0 8px 8px' }}
-                    >
-                      {courseGoals.map((goal: Goal) => {
-                        const goalTasks = findTasksForGoal(goal.id)
-                        return (
-                          <Panel
-                            header={renderGoalPanelHeader(goal)}
-                            key={goal.id}
-                            style={{ borderBottom: '1px solid #f0f0f0' }}
-                          >
-                            {goalTasks.length > 0 ? (
-                              <List
-                                size="small"
-                                dataSource={goalTasks}
-                                style={{ padding: '0 16px 16px 16px' }}
-                                renderItem={(task: Task) => (
-                                  <List.Item
-                                    style={{
-                                      padding: '8px 0',
-                                      borderBottom: '1px dashed #f0f0f0',
-                                    }}
-                                  >
-                                    <List.Item.Meta
-                                      title={
-                                        <Text
-                                          delete={task.status === '已完成'}
-                                          style={{ fontSize: '14px' }}
-                                        >
-                                          {task.name}
-                                        </Text>
-                                      }
-                                      description={
-                                        <Text
-                                          type="secondary"
-                                          style={{ fontSize: '12px' }}
-                                        >
-                                          截止: {task.deadline}
-                                        </Text>
-                                      }
-                                    />
-                                    <Tag
-                                      color={
-                                        task.status === '进行中'
-                                          ? 'processing'
-                                          : task.status === '已完成'
-                                          ? 'success'
-                                          : 'default'
-                                      }
-                                      style={{ marginRight: 0 }}
-                                    >
-                                      {task.status}
-                                    </Tag>
-                                  </List.Item>
-                                )}
-                              />
-                            ) : (
-                              <div style={{ padding: '16px' }}>
-                                <Text type="secondary">该目标下暂无任务</Text>
-                              </div>
-                            )}
-                          </Panel>
-                        )
-                      })}
-                    </Collapse>
-                  ) : (
-                    <div style={{ padding: '24px', textAlign: 'center' }}>
-                      <Text type="secondary">该课程下暂无目标</Text>
-                    </div>
-                  )}
-                </Card>
-              </Col>
-            )
-          })
+                  },
+                  body: {
+                    padding: '0',
+                  },
+                }}
+              >
+                <CourseContent course={course} />
+              </Card>
+            </Col>
+          ))
         ) : (
-          // Empty State when no active courses
           <Col span={24}>
-            <Card
-              bordered={false}
-              style={{
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
-                borderRadius: '8px',
-                textAlign: 'center',
-                padding: '48px 0',
-              }}
-            >
+            <Card className="empty-state-card">
               <Empty description="暂无进行中的课程进度">
                 <Link to="/courses">
                   <Button type="primary">去添加课程或目标</Button>
