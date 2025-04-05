@@ -9,6 +9,7 @@ import React, {
 interface User {
   username: string
   avatar?: string
+  createdAt?: string // 添加用户创建时间
 }
 
 interface AuthContextType {

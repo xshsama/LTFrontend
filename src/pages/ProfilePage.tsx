@@ -16,9 +16,11 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Divider,
   Form,
   Input,
+  message,
   Modal,
   Progress,
   Row,
@@ -27,11 +29,18 @@ import {
   Tag,
   Typography,
   Upload,
-  message,
 } from 'antd'
-import { RcFile } from 'antd/es/upload'
-import React, { useState } from 'react'
+import type { RcFile, UploadProps } from 'antd/es/upload'
+import dayjs from 'dayjs'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import {
+  getUserProfile,
+  UpdateProfileRequest,
+  updateUserProfile,
+  uploadAvatar,
+  UserProfile,
+} from '../services/profileService'
 import './ProfilePage.css'
 
 const { Title, Text, Paragraph } = Typography
@@ -57,7 +66,9 @@ const ProfilePage: React.FC = () => {
   const { user } = useAuth()
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [form] = Form.useForm()
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user?.avatar)
+  const [loading, setLoading] = useState(false)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined)
 
   // 模拟用户统计数据
   const userStats: UserStats = {
@@ -79,6 +90,25 @@ const ProfilePage: React.FC = () => {
     { id: '5', title: '连续学习7天', date: '2024-03-20', points: 50 },
   ]
 
+  // 在组件加载时获取用户个人资料
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true)
+        const profileData = await getUserProfile()
+        setProfile(profileData)
+        setAvatarUrl(profileData.avatar)
+        setLoading(false)
+      } catch (error) {
+        console.error('获取个人资料失败:', error)
+        message.error('无法获取个人资料，请稍后再试')
+        setLoading(false)
+      }
+    }
+
+    fetchUserProfile()
+  }, [])
+
   // 头像上传前的处理
   const beforeUpload = (file: RcFile) => {
     const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
@@ -93,24 +123,46 @@ const ProfilePage: React.FC = () => {
   }
 
   // 处理头像变更
-  const handleAvatarChange = (info: any) => {
+  const handleAvatarChange: UploadProps['onChange'] = async (info) => {
+    if (info.file.status === 'uploading') {
+      setLoading(true)
+      return
+    }
+
     if (info.file.status === 'done') {
-      // 这里应该从后端返回的响应中获取头像URL
-      // 模拟从服务器获取头像URL
-      setAvatarUrl(URL.createObjectURL(info.file.originFileObj))
-      message.success('头像上传成功!')
+      setLoading(false)
+
+      // 通过 uploadAvatar 服务处理上传（这里即使使用了Upload组件的action也需要传递头像文件）
+      if (info.file.originFileObj) {
+        try {
+          const avatarUrl = await uploadAvatar(info.file.originFileObj)
+          setAvatarUrl(avatarUrl)
+          message.success('头像上传成功!')
+
+          // 更新个人资料中的头像URL
+          if (profile) {
+            setProfile({
+              ...profile,
+              avatar: avatarUrl,
+            })
+          }
+        } catch (error) {
+          message.error('头像上传失败，请稍后重试!')
+        }
+      }
     }
   }
 
   // 处理个人资料编辑
   const handleProfileEdit = () => {
+    // 使用后端返回的个人资料数据填充表单
     form.setFieldsValue({
-      nickname: user?.username || '',
-      email: 'user@example.com', // 替换为实际邮箱
-      bio: '这是我的个人简介',
-      education: '本科',
-      major: '计算机科学',
-      interests: '编程, 读书, 音乐',
+      nickname: profile?.nickname || user?.username || '',
+      bio: profile?.bio || '',
+      birthday: profile?.birthday ? dayjs(profile.birthday) : undefined,
+      location: profile?.location || '',
+      education: profile?.education || '',
+      profession: profile?.profession || '',
     })
     setEditModalVisible(true)
   }
@@ -119,12 +171,32 @@ const ProfilePage: React.FC = () => {
   const handleProfileSave = async () => {
     try {
       const values = await form.validateFields()
-      console.log('更新的个人资料:', values)
-      // 这里应该调用API将更新后的个人资料发送到后端
+      setLoading(true)
+
+      // 准备更新请求数据
+      const updateData: UpdateProfileRequest = {
+        nickname: values.nickname,
+        bio: values.bio,
+        birthday: values.birthday
+          ? values.birthday.format('YYYY-MM-DD')
+          : undefined,
+        location: values.location,
+        education: values.education,
+        profession: values.profession,
+      }
+
+      // 调用更新个人资料API
+      const updatedProfile = await updateUserProfile(updateData)
+
+      // 更新本地状态
+      setProfile(updatedProfile)
       message.success('个人资料更新成功!')
       setEditModalVisible(false)
+      setLoading(false)
     } catch (error) {
-      console.error('表单验证失败:', error)
+      console.error('更新个人资料失败:', error)
+      message.error('个人资料更新失败，请稍后再试!')
+      setLoading(false)
     }
   }
 
@@ -135,29 +207,34 @@ const ProfilePage: React.FC = () => {
       children: (
         <div className="profile-about">
           <Paragraph>
-            这是我的个人简介，介绍我自己的学习目标、兴趣爱好和专业背景。
+            {profile?.bio ||
+              '这是我的个人简介，介绍我自己的学习目标、兴趣爱好和专业背景。'}
           </Paragraph>
           <Divider orientation="left">基本信息</Divider>
           <Row>
             <Col span={12}>
               <p>
-                <UserOutlined /> 昵称: {user?.username || '用户'}
+                <UserOutlined /> 昵称:{' '}
+                {profile?.nickname || user?.username || '用户'}
               </p>
               <p>
-                <MailOutlined /> 邮箱: user@example.com
+                <CalendarOutlined />{' '}
+                {profile?.birthday ? `生日: ${profile.birthday}` : '未设置生日'}
               </p>
               <p>
-                <CalendarOutlined /> 注册时间: 2023年10月15日
+                <CalendarOutlined /> 注册时间: {user?.createdAt || '未知'}
               </p>
             </Col>
             <Col span={12}>
               <p>
-                <TeamOutlined /> 学历: 本科
+                <TeamOutlined /> 学历: {profile?.education || '未设置'}
               </p>
               <p>
-                <StarOutlined /> 专业: 计算机科学
+                <StarOutlined /> 职业: {profile?.profession || '未设置'}
               </p>
-              <p>兴趣爱好: 编程, 读书, 音乐</p>
+              <p>
+                <MailOutlined /> 位置: {profile?.location || '未设置'}
+              </p>
             </Col>
           </Row>
           <Divider orientation="left">学习标签</Divider>
@@ -172,10 +249,12 @@ const ProfilePage: React.FC = () => {
         </div>
       ),
     },
+    // ...其他标签项保持不变
     {
       key: 'achievements',
       label: '我的成就',
       children: (
+        // ...成就内容保持不变
         <div className="profile-achievements">
           <Row gutter={[16, 16]}>
             {achievements.map((achievement) => (
@@ -212,6 +291,7 @@ const ProfilePage: React.FC = () => {
       key: 'stats',
       label: '学习统计',
       children: (
+        // ...统计内容保持不变
         <div className="profile-stats">
           <Row gutter={[16, 16]}>
             <Col
@@ -296,7 +376,10 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-page">
-      <Card bordered={false}>
+      <Card
+        bordered={false}
+        loading={loading}
+      >
         <div className="profile-header">
           <div className="profile-avatar-container">
             <Avatar
@@ -310,14 +393,17 @@ const ProfilePage: React.FC = () => {
                 showUploadList={false}
                 beforeUpload={beforeUpload}
                 onChange={handleAvatarChange}
-                action="http://localhost:8080/api/user/avatar"
-                headers={{
-                  Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+                customRequest={({ file, onSuccess }) => {
+                  // 这里由前端手动处理上传而非直接使用action
+                  setTimeout(() => {
+                    if (onSuccess) onSuccess({})
+                  }, 0)
                 }}
               >
                 <Button
                   icon={<UploadOutlined />}
                   size="small"
+                  loading={loading}
                 >
                   更换头像
                 </Button>
@@ -325,7 +411,9 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
           <div className="profile-info">
-            <Title level={3}>{user?.username || '用户'}</Title>
+            <Title level={3}>
+              {profile?.nickname || user?.username || '用户'}
+            </Title>
             <div className="profile-meta">
               <div className="user-level">
                 <Tag color="gold">Lv.{userStats.level}</Tag>
@@ -336,7 +424,7 @@ const ProfilePage: React.FC = () => {
                 </span>
                 <Divider type="vertical" />
                 <span>
-                  <CalendarOutlined /> 注册于: 2023/10/15
+                  <CalendarOutlined /> 注册于: {user?.createdAt || '未知'}
                 </span>
               </div>
             </div>
@@ -345,6 +433,7 @@ const ProfilePage: React.FC = () => {
                 type="primary"
                 icon={<EditOutlined />}
                 onClick={handleProfileEdit}
+                loading={loading}
               >
                 编辑个人资料
               </Button>
@@ -368,6 +457,7 @@ const ProfilePage: React.FC = () => {
         okText="保存"
         cancelText="取消"
         width={600}
+        confirmLoading={loading}
       >
         <Form
           form={form}
@@ -381,19 +471,6 @@ const ProfilePage: React.FC = () => {
             <Input placeholder="输入您的昵称" />
           </Form.Item>
           <Form.Item
-            name="email"
-            label="邮箱"
-            rules={[
-              { required: true, message: '请输入邮箱!' },
-              { type: 'email', message: '请输入有效的邮箱地址!' },
-            ]}
-          >
-            <Input
-              prefix={<MailOutlined />}
-              placeholder="your.email@example.com"
-            />
-          </Form.Item>
-          <Form.Item
             name="bio"
             label="个人简介"
           >
@@ -401,6 +478,21 @@ const ProfilePage: React.FC = () => {
               rows={4}
               placeholder="简单介绍一下自己吧"
             />
+          </Form.Item>
+          <Form.Item
+            name="birthday"
+            label="生日"
+          >
+            <DatePicker
+              style={{ width: '100%' }}
+              placeholder="选择您的生日"
+            />
+          </Form.Item>
+          <Form.Item
+            name="location"
+            label="所在地"
+          >
+            <Input placeholder="例如: 北京市、上海市" />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
@@ -413,19 +505,13 @@ const ProfilePage: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="major"
-                label="专业"
+                name="profession"
+                label="职业"
               >
-                <Input placeholder="例如: 计算机科学、数学" />
+                <Input placeholder="例如: 软件工程师、教师" />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item
-            name="interests"
-            label="兴趣爱好"
-          >
-            <Input placeholder="用逗号分隔您的兴趣爱好" />
-          </Form.Item>
         </Form>
       </Modal>
     </div>

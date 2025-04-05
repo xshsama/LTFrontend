@@ -12,15 +12,16 @@ import {
   ConfigProvider,
   Form,
   Input,
-  Switch,
-  Typography,
   message,
+  Switch,
   theme,
+  Typography,
 } from 'antd'
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { login as apiLogin, LoginRequest } from '../services/authService'
 import '../styles/LoginPage.css'
 
 const { Title } = Typography
@@ -36,43 +37,30 @@ const LoginPage: React.FC = () => {
   const onFinish = async (values: any) => {
     setLoading(true)
     setError(null)
-    console.log('Attempting login with:', values)
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: values.username,
-          password: values.password,
-        }),
+      // 使用authService中的login函数
+      const loginData: LoginRequest = {
+        username: values.username,
+        password: values.password,
+      }
+
+      const result = await apiLogin(loginData)
+
+      // 登录成功，使用AuthContext的login方法
+      login(result.token, {
+        username: values.username,
+        // 如果API返回的数据中有avatar或其他信息，可以在这里添加
       })
 
-      const result = await response.json()
-      console.log('Login response:', response.status, result)
+      message.success('登录成功！即将跳转...', 1)
 
-      if (response.ok && result.code === 200 && result.data?.token) {
-        // 登录成功，使用AuthContext的login方法
-        setError(null)
-        // 保存token并更新认证状态
-        login(result.data.token, {
-          username: values.username,
-          // 如果API返回的数据中有avatar，可以在这里添加
-        })
-        message.success('登录成功！即将跳转...', 1)
-
-        setTimeout(() => {
-          console.log('Redirecting to dashboard...')
-          navigate('/dashboard')
-        }, 1000)
-      } else {
-        setError(result.message || '登录失败，请检查您的用户名和密码。')
-      }
+      setTimeout(() => {
+        navigate('/dashboard')
+      }, 1000)
     } catch (err) {
-      console.error('Login API call failed:', err)
-      setError('登录请求失败，请稍后重试或检查网络连接。')
+      console.error('Login failed:', err)
+      setError(err instanceof Error ? err.message : '登录失败，请稍后重试')
     } finally {
       setLoading(false)
     }
