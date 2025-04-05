@@ -48,10 +48,8 @@ const LoginPage: React.FC = () => {
       const result = await apiLogin(loginData)
 
       // 登录成功，使用AuthContext的login方法
-      login(result.token, {
-        username: values.username,
-        // 如果API返回的数据中有avatar或其他信息，可以在这里添加
-      })
+      // 现在将完整的用户信息传递给login函数
+      login(result.token, result.userInfo)
 
       message.success('登录成功！即将跳转...', 1)
 

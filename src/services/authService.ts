@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { removeCookie, setObjectInCookie } from '../utils/cookies';
 
 const API_URL = 'http://localhost:8080/api';
 
@@ -8,9 +9,22 @@ export interface LoginRequest {
     password: string;
 }
 
+// 用户信息接口
+export interface UserInfo {
+    username: string;
+    nickname?: string;
+    avatar?: string;
+    bio?: string;
+    birthday?: string;
+    location?: string;
+    education?: string;
+    profession?: string;
+}
+
+// 更新后的登录响应接口，包含用户信息
 export interface LoginResponse {
     token: string;
-    // 根据实际API响应添加其他字段
+    userInfo: UserInfo;
 }
 
 // 登录函数
@@ -18,9 +32,15 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
     try {
         const response = await axios.post(`${API_URL}/auth/login`, credentials);
 
-        // 假设API返回格式为 { code: number, message: string, data: { token: string, ...其他数据 } }
+        // 假设API返回格式为 { code: number, message: string, data: { token: string, userInfo: {...} } }
         if (response.data.code === 200 && response.data.data?.token) {
-            return response.data.data;
+            const loginResponse = response.data.data;
+
+            // 将用户信息存储到cookie中，有效期7天
+            setObjectInCookie('userInfo', loginResponse.userInfo, 7);
+
+            // 返回完整的登录响应
+            return loginResponse;
         } else {
             throw new Error(response.data.message || '登录失败，请检查用户名和密码');
         }
@@ -68,4 +88,9 @@ export const getCurrentUser = async (): Promise<any> => {
         }
         throw new Error('获取用户信息请求失败，请检查网络连接');
     }
+};
+
+// 登出函数，清除 cookie 中的用户信息
+export const logout = (): void => {
+    removeCookie('userInfo');
 };
