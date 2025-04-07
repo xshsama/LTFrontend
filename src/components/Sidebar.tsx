@@ -4,7 +4,6 @@ import {
   BookOutlined,
   FolderOutlined,
   PieChartOutlined,
-  SettingOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import { Layout, Menu } from 'antd'
@@ -47,22 +46,7 @@ const menuItems = [
     icon: <TeamOutlined />,
     label: <Link to="/community">社区</Link>,
   },
-  // Example of a submenu (if needed later)
-  // {
-  //   key: 'sub1',
-  //   icon: <UserOutlined />,
-  //   label: 'User',
-  //   children: [
-  //     { key: '3', label: 'Tom' },
-  //     { key: '4', label: 'Bill' },
-  //     { key: '5', label: 'Alex' },
-  //   ],
-  // },
-  {
-    key: '/settings',
-    icon: <SettingOutlined />,
-    label: <Link to="/settings">设置</Link>,
-  },
+  // 已移除设置菜单项
 ]
 
 const Sidebar: React.FC = () => {

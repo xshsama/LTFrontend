@@ -24,6 +24,13 @@ export interface UpdateProfileRequest {
     profession?: string;
 }
 
+// 定义密码更新请求参数类型
+export interface UpdatePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+}
+
 // 获取当前用户的个人资料
 export const getUserProfile = async (): Promise<UserProfile> => {
     try {
@@ -42,6 +49,17 @@ export const updateUserProfile = async (profileData: UpdateProfileRequest): Prom
         return response.data.data;
     } catch (error) {
         console.error('更新个人资料失败:', error);
+        throw error;
+    }
+};
+
+// 更新用户密码
+export const updatePassword = async (passwordData: UpdatePasswordRequest): Promise<boolean> => {
+    try {
+        const response = await apiClient.put(`/user/password`, passwordData);
+        return response.data.code === 200;
+    } catch (error) {
+        console.error('密码更新失败:', error);
         throw error;
     }
 };

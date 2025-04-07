@@ -117,10 +117,10 @@ const ProfilePage: React.FC = () => {
   const handleAvatarSuccess = async (newAvatarUrl: string) => {
     try {
       setLoading(true)
-      
+
       // 更新本地状态
       setAvatarUrl(newAvatarUrl)
-      
+
       // 更新个人资料中的头像URL
       if (profile) {
         const updatedProfile = {
@@ -128,14 +128,14 @@ const ProfilePage: React.FC = () => {
           avatar: newAvatarUrl,
         }
         setProfile(updatedProfile)
-        
+
         // 重要：将新头像URL保存到服务器
         await updateUserProfile({ avatar: newAvatarUrl })
       }
-      
+
       // 更新全局用户状态
       updateUserInfo({ avatar: newAvatarUrl })
-      
+
       message.success('头像更新成功！')
       setLoading(false)
     } catch (error) {
