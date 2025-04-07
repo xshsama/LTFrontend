@@ -7,6 +7,13 @@ export interface LoginRequest {
     password: string;
 }
 
+// 注册请求接口
+export interface RegisterRequest {
+    username: string;
+    password: string;
+    confirmPassword: string;
+}
+
 // 用户信息接口
 export interface UserInfo {
     username: string;
@@ -17,6 +24,7 @@ export interface UserInfo {
     location?: string;
     education?: string;
     profession?: string;
+    created_at?: string;
 }
 
 // 更新后的登录响应接口，包含用户信息
@@ -91,7 +99,7 @@ export const refreshToken = async (): Promise<string> => {
 };
 
 // 注册函数
-export const register = async (data: { username: string; password: string }): Promise<any> => {
+export const register = async (data: RegisterRequest): Promise<any> => {
     try {
         const response = await apiClient.post(`/auth/register`, data);
         return response.data;

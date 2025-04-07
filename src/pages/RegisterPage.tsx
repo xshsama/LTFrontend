@@ -11,15 +11,15 @@ import {
   ConfigProvider,
   Form,
   Input,
-  Switch,
-  Typography,
   message,
+  Switch,
   theme,
+  Typography,
 } from 'antd'
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
-import { register } from '../services/authService'
+import { register, RegisterRequest } from '../services/authService'
 import '../styles/LoginPage.css' // 复用登录页面的样式
 
 const { Title } = Typography
@@ -42,10 +42,11 @@ const RegisterPage: React.FC = () => {
     setError(null)
 
     try {
-      // 调用注册API
-      const registerData = {
+      // 调用注册API，包含确认密码字段
+      const registerData: RegisterRequest = {
         username: values.username,
         password: values.password,
+        confirmPassword: values.confirmPassword, // 确保包含确认密码字段
       }
 
       await register(registerData)

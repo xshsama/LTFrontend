@@ -230,7 +230,7 @@ const ProfilePage: React.FC = () => {
                 {profile?.birthday ? `生日: ${profile.birthday}` : '未设置生日'}
               </p>
               <p>
-                <CalendarOutlined /> 注册时间: {user?.createdAt || '未知'}
+                <CalendarOutlined /> 注册时间: {profile?.createdAt || '未知'}
               </p>
             </Col>
             <Col span={12}>
@@ -432,7 +432,7 @@ const ProfilePage: React.FC = () => {
                 </span>
                 <Divider type="vertical" />
                 <span>
-                  <CalendarOutlined /> 注册于: {user?.createdAt || '未知'}
+                  <CalendarOutlined /> 注册于: {profile?.createdAt || '未知'}
                 </span>
               </div>
             </div>

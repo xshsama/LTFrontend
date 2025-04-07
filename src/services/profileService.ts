@@ -10,6 +10,7 @@ export interface UserProfile {
     location?: string;
     education?: string;
     profession?: string;
+    createdAt?: string; // 修改字段名以匹配后端
 }
 
 // 更新个人资料请求参数类型
