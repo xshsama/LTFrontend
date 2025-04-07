@@ -23,8 +23,13 @@ import {
   Typography,
 } from 'antd'
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { updatePassword, UpdatePasswordRequest } from '../services/profileService'
+import {
+  updatePassword,
+  UpdatePasswordRequest,
+} from '../services/profileService'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -43,6 +48,10 @@ const SettingsPage: React.FC = () => {
   // 主题设置
   const { theme, toggleTheme } = useTheme()
 
+  // 添加访问 AuthContext 和路由导航功能
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+
   // 处理密码修改
   const onFinishPassword = async (values: UpdatePasswordRequest) => {
     try {
@@ -54,18 +63,19 @@ const SettingsPage: React.FC = () => {
 
       // API调用成功后
       setPasswordSuccess(true)
-      message.success('密码修改成功！')
-      passwordForm.resetFields()
+      message.success('密码修改成功！系统将在3秒后自动退出登录...')
 
-      // 3秒后隐藏成功提示
+      // 3秒后自动退出登录并跳转到登录页面
       setTimeout(() => {
-        setPasswordSuccess(false)
+        logout() // 调用退出登录函数
+        navigate('/login') // 跳转到登录页面
       }, 3000)
     } catch (error: any) {
       console.error('密码修改错误:', error)
-      setPasswordError(error.response?.data?.message || '密码修改失败，请稍后再试')
+      setPasswordError(
+        error.response?.data?.message || '密码修改失败，请稍后再试',
+      )
       message.error('密码修改失败，请检查当前密码是否正确')
-    } finally {
       setPasswordLoading(false)
     }
   }
