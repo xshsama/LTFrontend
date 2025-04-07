@@ -96,12 +96,20 @@ const ProfilePage: React.FC = () => {
       try {
         setLoading(true)
         const profileData = await getUserProfile()
-        setProfile(profileData)
-        setAvatarUrl(profileData.avatar)
+
+        // 如果服务器返回了个人资料数据，则更新状态
+        if (profileData) {
+          setProfile(profileData)
+          setAvatarUrl(profileData.avatar)
+        } else {
+          // 用户未登录或者没有设置个人资料，不显示错误信息
+          console.log('用户未登录或没有设置个人资料')
+          setProfile(null)
+        }
         setLoading(false)
       } catch (error) {
         console.error('获取个人资料失败:', error)
-        message.error('无法获取个人资料，请稍后再试')
+        // 不再显示错误信息弹窗
         setLoading(false)
       }
     }

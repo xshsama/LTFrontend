@@ -1,7 +1,5 @@
-import axios from 'axios';
 import { removeCookie, setObjectInCookie } from '../utils/cookies';
-
-const API_URL = 'http://localhost:8080/api';
+import apiClient from './apiService';
 
 // 定义登录请求和响应的接口
 export interface LoginRequest {
@@ -27,10 +25,15 @@ export interface LoginResponse {
     userInfo: UserInfo;
 }
 
+// 刷新令牌响应接口
+export interface RefreshTokenResponse {
+    token: string;
+}
+
 // 登录函数
 export const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
-        const response = await axios.post(`${API_URL}/auth/login`, credentials);
+        const response = await apiClient.post(`/auth/login`, credentials);
 
         // 假设API返回格式为 { code: number, message: string, data: { token: string, userInfo: {...} } }
         if (response.data.code === 200 && response.data.data?.token) {
@@ -44,8 +47,8 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
         } else {
             throw new Error(response.data.message || '登录失败，请检查用户名和密码');
         }
-    } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
+    } catch (error: any) {
+        if (error.response) {
             // 处理服务器返回的错误
             throw new Error(error.response.data?.message || '登录请求失败，请稍后重试');
         }
@@ -54,13 +57,46 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
     }
 };
 
+// 刷新令牌函数
+export const refreshToken = async (): Promise<string> => {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            throw new Error('没有可刷新的令牌');
+        }
+
+        // 创建一个不带拦截器的axios实例，避免循环调用
+        const response = await apiClient.post('/auth/refresh-token', {}, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.data.code === 200 && response.data.data?.token) {
+            const newToken = response.data.data.token;
+
+            // 更新localStorage中的令牌
+            localStorage.setItem('authToken', newToken);
+
+            return newToken;
+        } else {
+            throw new Error(response.data.message || '令牌刷新失败');
+        }
+    } catch (error: any) {
+        if (error.response) {
+            throw new Error(error.response.data?.message || '令牌刷新请求失败');
+        }
+        throw new Error('令牌刷新请求失败，请检查网络连接');
+    }
+};
+
 // 注册函数
 export const register = async (data: { username: string; password: string }): Promise<any> => {
     try {
-        const response = await axios.post(`${API_URL}/auth/register`, data);
+        const response = await apiClient.post(`/auth/register`, data);
         return response.data;
-    } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
+    } catch (error: any) {
+        if (error.response) {
             throw new Error(error.response.data?.message || '注册失败');
         }
         throw new Error('注册请求失败，请检查网络连接');
@@ -69,21 +105,11 @@ export const register = async (data: { username: string; password: string }): Pr
 
 // 获取当前用户信息
 export const getCurrentUser = async (): Promise<any> => {
-    const token = localStorage.getItem('authToken');
-
-    if (!token) {
-        throw new Error('未登录');
-    }
-
     try {
-        const response = await axios.get(`${API_URL}/user/me`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const response = await apiClient.get(`/user/me`);
         return response.data.data;
-    } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
+    } catch (error: any) {
+        if (error.response) {
             throw new Error(error.response.data?.message || '获取用户信息失败');
         }
         throw new Error('获取用户信息请求失败，请检查网络连接');
@@ -93,4 +119,5 @@ export const getCurrentUser = async (): Promise<any> => {
 // 登出函数，清除 cookie 中的用户信息
 export const logout = (): void => {
     removeCookie('userInfo');
+    // API客户端会自动处理移除localStorage中的token
 };
