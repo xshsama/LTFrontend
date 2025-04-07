@@ -114,20 +114,35 @@ const ProfilePage: React.FC = () => {
   }, [])
 
   // 处理头像上传成功
-  const handleAvatarSuccess = (newAvatarUrl: string) => {
-    // 更新本地状态
-    setAvatarUrl(newAvatarUrl)
-
-    // 更新个人资料中的头像URL
-    if (profile) {
-      setProfile({
-        ...profile,
-        avatar: newAvatarUrl,
-      })
+  const handleAvatarSuccess = async (newAvatarUrl: string) => {
+    try {
+      setLoading(true)
+      
+      // 更新本地状态
+      setAvatarUrl(newAvatarUrl)
+      
+      // 更新个人资料中的头像URL
+      if (profile) {
+        const updatedProfile = {
+          ...profile,
+          avatar: newAvatarUrl,
+        }
+        setProfile(updatedProfile)
+        
+        // 重要：将新头像URL保存到服务器
+        await updateUserProfile({ avatar: newAvatarUrl })
+      }
+      
+      // 更新全局用户状态
+      updateUserInfo({ avatar: newAvatarUrl })
+      
+      message.success('头像更新成功！')
+      setLoading(false)
+    } catch (error) {
+      console.error('保存头像到个人资料失败:', error)
+      message.error('头像更新失败，请重试！')
+      setLoading(false)
     }
-
-    // 更新 AuthContext 中的用户信息，这样右上角的头像也会更新
-    updateUserInfo({ avatar: newAvatarUrl })
   }
 
   // 处理个人资料编辑
