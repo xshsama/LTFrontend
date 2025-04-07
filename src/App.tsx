@@ -15,6 +15,7 @@ import LoginPage from './pages/LoginPage' // Import LoginPage
 import Objectives from './pages/Objectives'
 import ProfilePage from './pages/ProfilePage' // 导入个人资料页面
 import Progress from './pages/Progress'
+import RegisterPage from './pages/RegisterPage' // 导入注册页面
 import Resources from './pages/Resources'
 import Settings from './pages/Settings'
 
@@ -39,6 +40,10 @@ const ThemedApp: React.FC = () => {
         <Route
           path="/login"
           element={<LoginPage />}
+        />
+        <Route
+          path="/signup"
+          element={<RegisterPage />}
         />
         {/* Wrap protected routes within a parent route using MainLayout */}
         <Route
