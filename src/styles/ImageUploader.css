@@ -1,0 +1,49 @@
+.image-uploader-container {
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.uploaded-image-container {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.image-preview {
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.image-preview img {
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.image-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 悬停效果 */
+.image-preview:hover {
+  border-color: #1890ff;
+  box-shadow: 0 0 5px rgba(24, 144, 255, 0.3);
+}
+
+/* 暗色模式适配 */
+.dark-theme .image-preview {
+  border-color: #434343;
+  background-color: #1f1f1f;
+}
+
+.dark-theme .image-preview:hover {
+  border-color: #177ddc;
+  box-shadow: 0 0 5px rgba(23, 125, 220, 0.3);
+}

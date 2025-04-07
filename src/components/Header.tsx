@@ -138,12 +138,11 @@ const Header: React.FC = () => {
               >
                 <Avatar
                   size="small"
-                  icon={<UserOutlined />}
+                  src={user?.avatar}
+                  icon={!user?.avatar && <UserOutlined />}
                   style={{ marginRight: 8 }}
                 >
-                  {user?.avatar
-                    ? null
-                    : user?.username?.slice(0, 1)?.toUpperCase()}
+                  {!user?.avatar && user?.username?.slice(0, 1)?.toUpperCase()}
                 </Avatar>
                 <span>{user?.username || '用户'}</span>
               </a>

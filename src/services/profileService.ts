@@ -46,21 +46,28 @@ export const updateUserProfile = async (profileData: UpdateProfileRequest): Prom
     }
 };
 
-// 上传用户头像
+// 上传用户头像 - 使用新的头像上传API
 export const uploadAvatar = async (file: File): Promise<string> => {
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append('file', file);
 
     try {
-        const response = await apiClient.post(`/profile/avatar`, formData, {
+        // 调用后端的头像上传API
+        const response = await apiClient.post('avatar/upload/file', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
         });
 
-        return response.data.data.avatar;
-    } catch (error) {
+        if (response.data.code === 200 && response.data.data) {
+            // 从响应中获取图片URL
+            const imageUrl = response.data.data.data.url;
+            return imageUrl;
+        } else {
+            throw new Error(response.data.message || '头像上传失败');
+        }
+    } catch (error: any) {
         console.error('头像上传失败:', error);
-        throw error;
+        throw new Error(error.response?.data?.message || '头像上传请求失败，请检查网络连接');
     }
 };

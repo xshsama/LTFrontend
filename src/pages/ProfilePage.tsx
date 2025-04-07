@@ -8,11 +8,9 @@ import {
   StarOutlined,
   TeamOutlined,
   TrophyOutlined,
-  UploadOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import {
-  Avatar,
   Button,
   Card,
   Col,
@@ -28,17 +26,15 @@ import {
   Tabs,
   Tag,
   Typography,
-  Upload,
 } from 'antd'
-import type { RcFile, UploadProps } from 'antd/es/upload'
 import dayjs from 'dayjs'
 import React, { useEffect, useState } from 'react'
+import AvatarUploader from '../components/AvatarUploader'
 import { useAuth } from '../contexts/AuthContext'
 import {
   getUserProfile,
   UpdateProfileRequest,
   updateUserProfile,
-  uploadAvatar,
   UserProfile,
 } from '../services/profileService'
 import './ProfilePage.css'
@@ -63,7 +59,7 @@ interface UserStats {
 }
 
 const ProfilePage: React.FC = () => {
-  const { user } = useAuth()
+  const { user, updateUserInfo } = useAuth() // 添加 updateUserInfo
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
@@ -117,48 +113,21 @@ const ProfilePage: React.FC = () => {
     fetchUserProfile()
   }, [])
 
-  // 头像上传前的处理
-  const beforeUpload = (file: RcFile) => {
-    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
-    if (!isJpgOrPng) {
-      message.error('只能上传 JPG/PNG 格式的图片!')
-    }
-    const isLt2M = file.size / 1024 / 1024 < 2
-    if (!isLt2M) {
-      message.error('图片必须小于 2MB!')
-    }
-    return isJpgOrPng && isLt2M
-  }
+  // 处理头像上传成功
+  const handleAvatarSuccess = (newAvatarUrl: string) => {
+    // 更新本地状态
+    setAvatarUrl(newAvatarUrl)
 
-  // 处理头像变更
-  const handleAvatarChange: UploadProps['onChange'] = async (info) => {
-    if (info.file.status === 'uploading') {
-      setLoading(true)
-      return
+    // 更新个人资料中的头像URL
+    if (profile) {
+      setProfile({
+        ...profile,
+        avatar: newAvatarUrl,
+      })
     }
 
-    if (info.file.status === 'done') {
-      setLoading(false)
-
-      // 通过 uploadAvatar 服务处理上传（这里即使使用了Upload组件的action也需要传递头像文件）
-      if (info.file.originFileObj) {
-        try {
-          const avatarUrl = await uploadAvatar(info.file.originFileObj)
-          setAvatarUrl(avatarUrl)
-          message.success('头像上传成功!')
-
-          // 更新个人资料中的头像URL
-          if (profile) {
-            setProfile({
-              ...profile,
-              avatar: avatarUrl,
-            })
-          }
-        } catch (error) {
-          message.error('头像上传失败，请稍后重试!')
-        }
-      }
-    }
+    // 更新 AuthContext 中的用户信息，这样右上角的头像也会更新
+    updateUserInfo({ avatar: newAvatarUrl })
   }
 
   // 处理个人资料编辑
@@ -390,33 +359,12 @@ const ProfilePage: React.FC = () => {
       >
         <div className="profile-header">
           <div className="profile-avatar-container">
-            <Avatar
+            {/* 使用新的AvatarUploader组件替换原来的上传组件 */}
+            <AvatarUploader
+              currentAvatar={avatarUrl}
+              onSuccess={handleAvatarSuccess}
               size={120}
-              icon={<UserOutlined />}
-              src={avatarUrl}
             />
-            <div className="avatar-overlay">
-              <Upload
-                name="avatar"
-                showUploadList={false}
-                beforeUpload={beforeUpload}
-                onChange={handleAvatarChange}
-                customRequest={({ file, onSuccess }) => {
-                  // 这里由前端手动处理上传而非直接使用action
-                  setTimeout(() => {
-                    if (onSuccess) onSuccess({})
-                  }, 0)
-                }}
-              >
-                <Button
-                  icon={<UploadOutlined />}
-                  size="small"
-                  loading={loading}
-                >
-                  更换头像
-                </Button>
-              </Upload>
-            </div>
           </div>
           <div className="profile-info">
             <Title level={3}>

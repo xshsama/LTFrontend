@@ -1,0 +1,13 @@
+.avatar-uploader {
+  text-align: center;
+}
+
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.upload-button {
+  margin-top: 8px;
+}
