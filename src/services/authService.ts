@@ -24,7 +24,7 @@ export interface UserInfo {
     location?: string;
     education?: string;
     profession?: string;
-    created_at?: string;
+    createdAt?: string;  // 修改为驼峰命名法，与后端一致
 }
 
 // 更新后的登录响应接口，包含用户信息
@@ -114,7 +114,7 @@ export const register = async (data: RegisterRequest): Promise<any> => {
 // 获取当前用户信息
 export const getCurrentUser = async (): Promise<any> => {
     try {
-        const response = await apiClient.get(`/user/me`);
+        const response = await apiClient.get(`/user/profile`);
         return response.data.data;
     } catch (error: any) {
         if (error.response) {

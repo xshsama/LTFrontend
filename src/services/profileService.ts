@@ -34,8 +34,34 @@ export interface UpdatePasswordRequest {
 // 获取当前用户的个人资料
 export const getUserProfile = async (): Promise<UserProfile> => {
     try {
+        // 修改请求路径，尝试不同的API端点
+        console.log('正在请求用户个人资料...');
+
+        // 首先尝试 /user/profile 路径
+        try {
+            const response = await apiClient.get(`/user/profile`);
+            console.log('API响应 (/user/profile):', response);
+            if (response.data && response.data.data) {
+                return response.data.data;
+            }
+        } catch (err) {
+            console.log('请求 /user/profile 失败，尝试备用路径');
+        }
+
+        // 如果第一个路径失败，尝试 /profile 路径
         const response = await apiClient.get(`/profile`);
-        return response.data.data; // ApiResponse 的 data 字段包含实际数据
+        console.log('API响应 (/profile):', response);
+
+        // 检查响应数据的结构
+        if (response.data?.code === 200) {
+            // 标准的API响应格式
+            return response.data.data;
+        } else if (response.data) {
+            // 直接返回数据
+            return response.data;
+        } else {
+            throw new Error('无效的响应数据格式');
+        }
     } catch (error) {
         console.error('获取个人资料失败:', error);
         throw error;
@@ -45,8 +71,31 @@ export const getUserProfile = async (): Promise<UserProfile> => {
 // 更新当前用户的个人资料
 export const updateUserProfile = async (profileData: UpdateProfileRequest): Promise<UserProfile> => {
     try {
+        // 尝试不同的API端点
+        console.log('正在更新用户个人资料:', profileData);
+
+        // 首先尝试 /user/profile 路径
+        try {
+            const response = await apiClient.put(`/user/profile`, profileData);
+            console.log('API响应 (/user/profile):', response);
+            if (response.data && response.data.data) {
+                return response.data.data;
+            }
+        } catch (err) {
+            console.log('请求 /user/profile 失败，尝试备用路径');
+        }
+
+        // 如果第一个路径失败，尝试 /profile 路径
         const response = await apiClient.put(`/profile`, profileData);
-        return response.data.data;
+        console.log('API响应 (/profile):', response);
+
+        if (response.data?.code === 200) {
+            return response.data.data;
+        } else if (response.data) {
+            return response.data;
+        } else {
+            throw new Error('无效的响应数据格式');
+        }
     } catch (error) {
         console.error('更新个人资料失败:', error);
         throw error;

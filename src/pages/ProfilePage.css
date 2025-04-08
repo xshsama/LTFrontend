@@ -71,7 +71,18 @@
   text-align: center;
 }
 
-/* 支持暗色模式 */
-.dark-theme .user-stats {
-  color: rgba(255, 255, 255, 0.45);
+/* 支持所有可能的暗色模式类名 */
+.dark-theme .user-stats,
+[data-theme='dark'] .user-stats,
+html.dark .user-stats,
+body.dark .user-stats {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* 确保图标在暗色模式下也能清晰可见 */
+.dark-theme .user-stats .anticon,
+[data-theme='dark'] .user-stats .anticon,
+html.dark .user-stats .anticon,
+body.dark .user-stats .anticon {
+  color: rgba(255, 255, 255, 0.85) !important;
 }

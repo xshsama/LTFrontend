@@ -17,15 +17,20 @@ import {
   message,
   Modal,
   Select,
-  Space,
   Switch,
   Tabs,
   Typography,
 } from 'antd'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react' // 引入 useEffect
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+// 引入偏好设置服务和类型
+import {
+  getUserPreferences,
+  updateUserPreferences,
+  UserPreference,
+} from '../services/preferenceService'
 import {
   updatePassword,
   UpdatePasswordRequest,
@@ -37,22 +42,53 @@ const { confirm } = Modal
 
 const SettingsPage: React.FC = () => {
   // 状态管理
-  const [passwordForm] = Form.useForm()
-  const [notificationForm] = Form.useForm()
+  const [passwordForm] = Form.useForm<UpdatePasswordRequest>()
+  const [notificationForm] = Form.useForm<UserPreference>() // 指定表单数据类型
+  const [preferenceForm] = Form.useForm<UserPreference>() // 新增偏好设置表单
+  const [loading, setLoading] = useState(true) // 统一加载状态
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [notificationLoading, setNotificationLoading] = useState(false)
+  const [preferenceLoading, setPreferenceLoading] = useState(false) // 新增偏好设置加载状态
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [notificationSuccess, setNotificationSuccess] = useState(false)
+  const [preferenceSuccess, setPreferenceSuccess] = useState(false) // 新增偏好设置成功状态
 
-  // 主题设置
-  const { theme, toggleTheme } = useTheme()
+  // 主题设置 (保留 useTheme)
+  const { theme, toggleTheme: contextToggleTheme } = useTheme()
 
-  // 添加访问 AuthContext 和路由导航功能
+  // 访问 AuthContext 和路由导航功能
   const { logout } = useAuth()
   const navigate = useNavigate()
 
-  // 处理密码修改
+  // --- 数据获取 ---
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      setLoading(true)
+      try {
+        const prefs = await getUserPreferences()
+        // 使用获取的数据设置表单初始值
+        notificationForm.setFieldsValue(prefs)
+        preferenceForm.setFieldsValue(prefs)
+        // 如果主题设置来自 context，确保 UI 同步 (如果 prefs.theme 存在)
+        if (prefs.theme && prefs.theme !== theme) {
+          // 注意：这里可能需要更复杂的逻辑来同步 context 和后端设置
+          console.warn(
+            `Theme mismatch: context is ${theme}, backend is ${prefs.theme}`,
+          )
+          // 可以在这里决定是以 context 为准还是以后端为准
+        }
+      } catch (error) {
+        message.error('加载用户偏好设置失败')
+        console.error('加载偏好设置错误:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPreferences()
+  }, [notificationForm, preferenceForm, theme]) // 依赖加入表单实例和 theme
+
+  // --- 处理密码修改 ---
   const onFinishPassword = async (values: UpdatePasswordRequest) => {
     try {
       setPasswordLoading(true)
@@ -80,28 +116,59 @@ const SettingsPage: React.FC = () => {
     }
   }
 
-  // 处理通知设置
-  const onFinishNotifications = async (values: any) => {
+  // --- 处理通知设置 ---
+  const onFinishNotifications = async (values: UserPreference) => {
+    setNotificationLoading(true)
+    setNotificationSuccess(false) // 重置成功状态
     try {
-      setNotificationLoading(true)
-      // 模拟API调用
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      console.log('Notification settings submitted:', values)
-
-      // API调用成功后
+      console.log('提交通知设置:', values)
+      await updateUserPreferences(values)
       setNotificationSuccess(true)
       message.success('通知设置已更新')
-
-      // 3秒后隐藏成功提示
-      setTimeout(() => {
-        setNotificationSuccess(false)
-      }, 3000)
-    } catch (error) {
-      message.error('通知设置更新失败，请稍后再试')
+      // 短暂显示成功信息
+      setTimeout(() => setNotificationSuccess(false), 3000)
+    } catch (error: any) {
+      message.error(error.message || '通知设置更新失败，请稍后再试')
       console.error('通知设置错误:', error)
     } finally {
       setNotificationLoading(false)
     }
+  }
+
+  // --- 处理偏好设置 --- (新增)
+  const onFinishPreferences = async (values: UserPreference) => {
+    setPreferenceLoading(true)
+    setPreferenceSuccess(false) // 重置成功状态
+    try {
+      console.log('提交偏好设置:', values)
+      // 注意：主题切换可能需要特殊处理，因为它也由 ThemeContext 控制
+      // 这里我们先直接更新后端
+      await updateUserPreferences(values)
+      setPreferenceSuccess(true)
+      message.success('偏好设置已更新')
+      // 如果主题被更改，也调用 context 的切换函数 (可选，取决于设计)
+      if (values.theme && values.theme !== theme) {
+        // contextToggleTheme(); // 调用 context 的切换函数，如果需要立即反映
+        // 或者提示用户刷新页面以应用主题
+        message.info('主题设置已更新，可能需要刷新页面查看效果。')
+      }
+      // 短暂显示成功信息
+      setTimeout(() => setPreferenceSuccess(false), 3000)
+    } catch (error: any) {
+      message.error(error.message || '偏好设置更新失败，请稍后再试')
+      console.error('偏好设置错误:', error)
+    } finally {
+      setPreferenceLoading(false)
+    }
+  }
+
+  // --- 主题切换处理 --- (修改)
+  // 包装原始的 toggleTheme，以便在切换时也更新表单值
+  const handleThemeToggle = (checked: boolean) => {
+    const newTheme = checked ? 'dark' : 'light'
+    contextToggleTheme() // 调用原始 context 方法切换主题
+    preferenceForm.setFieldsValue({ theme: newTheme }) // 更新表单中的值
+    // 注意：这里不立即调用保存，让用户点击保存按钮
   }
 
   // 显示密码修改确认对话框
@@ -250,30 +317,30 @@ const SettingsPage: React.FC = () => {
               style={{ marginBottom: 24 }}
             />
           )}
-          <Form
+          <Form<UserPreference> // 指定泛型类型
             form={notificationForm}
             layout="vertical"
             onFinish={onFinishNotifications}
-            initialValues={{ emailNotifications: true, taskReminders: 'daily' }}
+            // initialValues 不再需要，由 useEffect 设置
           >
             <Form.Item
-              name="emailNotifications"
+              name="emailNotifications" // 匹配 DTO/Entity
               label="邮件通知"
-              valuePropName="checked"
+              valuePropName="checked" // Switch 使用 checked
               extra="接收重要的系统通知和更新"
             >
-              <Switch
-                checkedChildren="开启"
-                unCheckedChildren="关闭"
-              />
+              <Switch />
             </Form.Item>
 
             <Form.Item
-              name="taskReminders"
+              name="taskReminderFrequency" // 匹配 DTO/Entity
               label="任务提醒频率"
               extra="选择接收学习任务提醒的频率"
             >
-              <Select style={{ width: '50%' }}>
+              <Select
+                style={{ width: '50%' }}
+                placeholder="选择频率"
+              >
                 <Option value="daily">每天</Option>
                 <Option value="weekly">每周</Option>
                 <Option value="never">从不</Option>
@@ -281,28 +348,21 @@ const SettingsPage: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              name="communityUpdates"
+              name="communityUpdatesEnabled" // 匹配 DTO/Entity
               label="社区动态通知"
               valuePropName="checked"
               extra="接收来自社区的更新、互动和回复"
             >
-              <Switch
-                checkedChildren="开启"
-                unCheckedChildren="关闭"
-              />
+              <Switch />
             </Form.Item>
 
             <Form.Item
-              name="achievementNotifications"
+              name="achievementNotificationsEnabled" // 匹配 DTO/Entity
               label="成就解锁通知"
               valuePropName="checked"
               extra="当你解锁新成就时收到通知"
-              initialValue={true}
             >
-              <Switch
-                checkedChildren="开启"
-                unCheckedChildren="关闭"
-              />
+              <Switch />
             </Form.Item>
 
             <Divider />
@@ -334,92 +394,139 @@ const SettingsPage: React.FC = () => {
           bordered={false}
           className="settings-card"
         >
-          <Space
-            direction="vertical"
-            size="large"
-            style={{ width: '100%' }}
+          {/* 新增成功提示 */}
+          {preferenceSuccess && (
+            <Alert
+              message="偏好设置已保存"
+              type="success"
+              showIcon
+              icon={<CheckCircleFilled />}
+              style={{ marginBottom: 24 }}
+            />
+          )}
+          {/* 将偏好设置内容放入 Form 中 */}
+          <Form<UserPreference> // 指定泛型类型
+            form={preferenceForm}
+            layout="vertical"
+            onFinish={onFinishPreferences}
+            // initialValues 不再需要，由 useEffect 设置
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
+            <Form.Item
+              name="theme" // 匹配 DTO/Entity
+              label="主题设置"
+              valuePropName="checked" // Switch 使用 checked
+              getValueFromEvent={(checked) => (checked ? 'dark' : 'light')} // 转换 Switch 值
+              // 注意：这里的 label 和 extra 只是展示，实际控制在下面的 Switch
             >
-              <div>
-                <Text strong>主题设置</Text>
+              {/* 使用 Form.Item 包裹，但实际控制 UI 在下面 */}
+              {/* 这个 Form.Item 主要用于收集/设置 'theme' 的值 */}
+            </Form.Item>
+            {/* 单独渲染 Switch 并连接到 handleThemeToggle */}
+            <div style={{ marginBottom: 24 }}>
+              {' '}
+              {/* 添加一些间距 */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
-                  <Text type="secondary">选择深色或浅色模式</Text>
+                  <Text strong>主题设置</Text>
+                  <div>
+                    <Text type="secondary">选择深色或浅色模式</Text>
+                  </div>
                 </div>
+                <Switch
+                  checkedChildren="深色"
+                  unCheckedChildren="浅色"
+                  checked={theme === 'dark'} // 从 context 获取当前主题状态
+                  onChange={handleThemeToggle} // 使用包装后的切换函数
+                />
               </div>
-              <Switch
-                checkedChildren="深色"
-                unCheckedChildren="浅色"
-                checked={theme === 'dark'}
-                onChange={toggleTheme}
-              />
             </div>
 
             <Divider style={{ margin: '12px 0' }} />
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
+            <Form.Item
+              name="defaultPage" // 匹配 DTO/Entity
+              label="默认页面"
+              extra="登录后首先显示的页面"
             >
-              <div>
-                <Text strong>默认页面</Text>
-                <div>
-                  <Text type="secondary">登录后首先显示的页面</Text>
-                </div>
-              </div>
               <Select
-                defaultValue="dashboard"
                 style={{ width: '200px' }}
+                placeholder="选择默认页面"
               >
                 <Option value="dashboard">仪表盘</Option>
                 <Option value="objectives">目标与任务</Option>
                 <Option value="courses">课程/科目</Option>
               </Select>
-            </div>
+            </Form.Item>
 
             <Divider style={{ margin: '12px 0' }} />
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
+            <Form.Item
+              name="fixedSidebarEnabled" // 匹配 DTO/Entity
+              label="固定侧边栏"
+              valuePropName="checked" // Switch 使用 checked
+              extra="侧边导航栏始终可见"
             >
-              <div>
-                <Text strong>固定侧边栏</Text>
+              {/* 这个 Form.Item 主要用于收集/设置 'fixedSidebarEnabled' 的值 */}
+            </Form.Item>
+            {/* 单独渲染 Switch */}
+            <div style={{ marginBottom: 24 }}>
+              {' '}
+              {/* 添加一些间距 */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
-                  <Text type="secondary">侧边导航栏始终可见</Text>
+                  <Text strong>固定侧边栏</Text>
+                  <div>
+                    <Text type="secondary">侧边导航栏始终可见</Text>
+                  </div>
                 </div>
+                {/* 从 Form 中获取 Switch 的状态 */}
+                <Form.Item
+                  name="fixedSidebarEnabled"
+                  valuePropName="checked"
+                  noStyle
+                >
+                  <Switch
+                    checkedChildren={<PushpinOutlined />}
+                    unCheckedChildren={<PushpinOutlined />}
+                  />
+                </Form.Item>
               </div>
-              <Switch
-                checkedChildren={<PushpinOutlined />}
-                unCheckedChildren={<PushpinOutlined />}
-                defaultChecked
-              />
             </div>
-          </Space>
 
-          <Divider />
+            <Divider />
 
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-          >
-            保存偏好设置
-          </Button>
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit" // 改为 submit 以触发表单 onFinish
+                icon={<SaveOutlined />}
+                loading={preferenceLoading} // 使用偏好设置加载状态
+              >
+                保存偏好设置
+              </Button>
+            </Form.Item>
+          </Form>
         </Card>
       ),
     },
   ]
+
+  // 添加全局加载状态显示
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '50px' }}>加载中...</div>
+  }
 
   return (
     <div

@@ -11,6 +11,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -65,6 +66,7 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
 
   // 模拟用户统计数据
   const userStats: UserStats = {
@@ -91,27 +93,48 @@ const ProfilePage: React.FC = () => {
     const fetchUserProfile = async () => {
       try {
         setLoading(true)
+        setError(null)
+
+        console.log('开始请求用户个人资料...')
         const profileData = await getUserProfile()
+        console.log('获取的用户个人资料数据:', profileData)
 
         // 如果服务器返回了个人资料数据，则更新状态
         if (profileData) {
           setProfile(profileData)
           setAvatarUrl(profileData.avatar)
+          console.log('用户个人资料已更新到状态')
         } else {
-          // 用户未登录或者没有设置个人资料，不显示错误信息
-          console.log('用户未登录或没有设置个人资料')
+          // 用户未登录或者没有设置个人资料
+          console.log('警告: 服务器返回了空的个人资料数据')
           setProfile(null)
+          setError('无法加载个人资料数据，请稍后再试')
         }
         setLoading(false)
-      } catch (error) {
+      } catch (error: any) {
         console.error('获取个人资料失败:', error)
-        // 不再显示错误信息弹窗
+        setProfile(null)
+        setError(error?.message || '获取个人资料失败，请稍后再试')
         setLoading(false)
       }
     }
 
     fetchUserProfile()
   }, [])
+
+  // 在个人资料更新或模态框打开时，自动更新表单数据
+  useEffect(() => {
+    if (profile && editModalVisible) {
+      form.setFieldsValue({
+        nickname: profile.nickname || user?.username || '',
+        bio: profile.bio || '',
+        birthday: profile.birthday ? dayjs(profile.birthday) : undefined,
+        location: profile.location || '',
+        education: profile.education || '',
+        profession: profile.profession || '',
+      })
+    }
+  }, [profile, editModalVisible, form, user])
 
   // 处理头像上传成功
   const handleAvatarSuccess = async (newAvatarUrl: string) => {
@@ -147,15 +170,6 @@ const ProfilePage: React.FC = () => {
 
   // 处理个人资料编辑
   const handleProfileEdit = () => {
-    // 使用后端返回的个人资料数据填充表单
-    form.setFieldsValue({
-      nickname: profile?.nickname || user?.username || '',
-      bio: profile?.bio || '',
-      birthday: profile?.birthday ? dayjs(profile.birthday) : undefined,
-      location: profile?.location || '',
-      education: profile?.education || '',
-      profession: profile?.profession || '',
-    })
     setEditModalVisible(true)
   }
 
@@ -372,51 +386,77 @@ const ProfilePage: React.FC = () => {
         bordered={false}
         loading={loading}
       >
-        <div className="profile-header">
-          <div className="profile-avatar-container">
-            {/* 使用新的AvatarUploader组件替换原来的上传组件 */}
-            <AvatarUploader
-              currentAvatar={avatarUrl}
-              onSuccess={handleAvatarSuccess}
-              size={120}
-            />
-          </div>
-          <div className="profile-info">
-            <Title level={3}>
-              {profile?.nickname || user?.username || '用户'}
-            </Title>
-            <div className="profile-meta">
-              <div className="user-level">
-                <Tag color="gold">Lv.{userStats.level}</Tag>
-              </div>
-              <div className="user-stats">
-                <span>
-                  <TrophyOutlined /> 成就: {achievements.length}
-                </span>
-                <Divider type="vertical" />
-                <span>
-                  <CalendarOutlined /> 注册于: {profile?.createdAt || '未知'}
-                </span>
-              </div>
-            </div>
-            <div className="profile-actions">
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={handleProfileEdit}
-                loading={loading}
-              >
-                编辑个人资料
-              </Button>
-            </div>
-          </div>
-        </div>
+        {error && (
+          <Alert
+            message="加载错误"
+            description={error}
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+            closable
+            onClose={() => setError(null)}
+          />
+        )}
 
-        <Tabs
-          items={profileTabItems}
-          defaultActiveKey="about"
-          style={{ marginTop: '20px' }}
-        />
+        {!loading && !profile && !error && (
+          <Alert
+            message="未找到个人资料"
+            description="暂无个人资料数据，请先设置您的个人信息"
+            type="info"
+            showIcon
+          />
+        )}
+
+        {profile && (
+          <>
+            <div className="profile-header">
+              <div className="profile-avatar-container">
+                {/* 使用新的AvatarUploader组件替换原来的上传组件 */}
+                <AvatarUploader
+                  currentAvatar={avatarUrl}
+                  onSuccess={handleAvatarSuccess}
+                  size={120}
+                />
+              </div>
+              <div className="profile-info">
+                <Title level={3}>
+                  {profile?.nickname || user?.username || '用户'}
+                </Title>
+                <div className="profile-meta">
+                  <div className="user-level">
+                    <Tag color="gold">Lv.{userStats.level}</Tag>
+                  </div>
+                  <div className="user-stats">
+                    <span>
+                      <TrophyOutlined /> 成就: {achievements.length}
+                    </span>
+                    <Divider type="vertical" />
+                    <span>
+                      <CalendarOutlined /> 注册于:{' '}
+                      {profile?.createdAt || '未知'}
+                    </span>
+                  </div>
+                </div>
+                <div className="profile-actions">
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={handleProfileEdit}
+                    loading={loading}
+                  >
+                    编辑个人资料
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <Tabs
+              items={profileTabItems}
+              defaultActiveKey="about"
+              style={{ marginTop: '20px' }}
+            />
+          </>
+        )}
       </Card>
 
       {/* 编辑个人资料的模态框 */}
