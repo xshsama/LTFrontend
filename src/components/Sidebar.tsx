@@ -2,14 +2,13 @@ import {
   AimOutlined,
   BarChartOutlined,
   BookOutlined,
-  FolderOutlined,
   PieChartOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import { Layout, Menu } from 'antd'
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-// No longer need: import '../styles/Sidebar.css'
+import { usePreferences } from '../contexts/PreferenceContext'
 
 const { Sider } = Layout
 
@@ -37,11 +36,6 @@ const menuItems = [
     label: <Link to="/progress">学习进度</Link>,
   },
   {
-    key: '/resources',
-    icon: <FolderOutlined />,
-    label: <Link to="/resources">学习资源</Link>,
-  },
-  {
     key: '/community',
     icon: <TeamOutlined />,
     label: <Link to="/community">社区</Link>,
@@ -51,19 +45,16 @@ const menuItems = [
 
 const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false)
-  const location = useLocation() // Get current location
-
-  // Determine the selected key based on the current path
-  // Find the menu item whose key matches the start of the current pathname
-  // Need to handle the new '/objectives' path correctly
+  const location = useLocation()
+  const { preferences } = usePreferences()
   const currentKey =
     menuItems.find((item) => location.pathname.startsWith(item.key))?.key ||
     '/dashboard'
 
   return (
     <Sider
-      collapsible
-      collapsed={collapsed}
+      collapsible={!preferences.fixedSidebarEnabled}
+      collapsed={preferences.fixedSidebarEnabled ? false : collapsed}
       onCollapse={(value) => setCollapsed(value)}
     >
       <div

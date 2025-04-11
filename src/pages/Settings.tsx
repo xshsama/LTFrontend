@@ -24,13 +24,9 @@ import {
 import React, { useEffect, useState } from 'react' // 引入 useEffect
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferenceContext'
 import { useTheme } from '../contexts/ThemeContext'
-// 引入偏好设置服务和类型
-import {
-  getUserPreferences,
-  updateUserPreferences,
-  UserPreference,
-} from '../services/preferenceService'
+import { UserPreference } from '../services/preferenceService'
 import {
   updatePassword,
   UpdatePasswordRequest,
@@ -62,31 +58,16 @@ const SettingsPage: React.FC = () => {
   const navigate = useNavigate()
 
   // --- 数据获取 ---
+  // 使用 PreferenceContext
+  const { preferences } = usePreferences()
+
+  // 初始化表单数据
   useEffect(() => {
-    const fetchPreferences = async () => {
-      setLoading(true)
-      try {
-        const prefs = await getUserPreferences()
-        // 使用获取的数据设置表单初始值
-        notificationForm.setFieldsValue(prefs)
-        preferenceForm.setFieldsValue(prefs)
-        // 如果主题设置来自 context，确保 UI 同步 (如果 prefs.theme 存在)
-        if (prefs.theme && prefs.theme !== theme) {
-          // 注意：这里可能需要更复杂的逻辑来同步 context 和后端设置
-          console.warn(
-            `Theme mismatch: context is ${theme}, backend is ${prefs.theme}`,
-          )
-          // 可以在这里决定是以 context 为准还是以后端为准
-        }
-      } catch (error) {
-        message.error('加载用户偏好设置失败')
-        console.error('加载偏好设置错误:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchPreferences()
-  }, [notificationForm, preferenceForm, theme]) // 依赖加入表单实例和 theme
+    setLoading(true)
+    notificationForm.setFieldsValue(preferences)
+    preferenceForm.setFieldsValue(preferences)
+    setLoading(false)
+  }, [notificationForm, preferenceForm, preferences])
 
   // --- 处理密码修改 ---
   const onFinishPassword = async (values: UpdatePasswordRequest) => {
@@ -116,16 +97,17 @@ const SettingsPage: React.FC = () => {
     }
   }
 
+  // 从 PreferenceContext 获取更新函数
+  const { updatePreferences } = usePreferences()
+
   // --- 处理通知设置 ---
   const onFinishNotifications = async (values: UserPreference) => {
     setNotificationLoading(true)
-    setNotificationSuccess(false) // 重置成功状态
+    setNotificationSuccess(false)
     try {
-      console.log('提交通知设置:', values)
-      await updateUserPreferences(values)
+      await updatePreferences(values)
       setNotificationSuccess(true)
       message.success('通知设置已更新')
-      // 短暂显示成功信息
       setTimeout(() => setNotificationSuccess(false), 3000)
     } catch (error: any) {
       message.error(error.message || '通知设置更新失败，请稍后再试')
@@ -135,24 +117,17 @@ const SettingsPage: React.FC = () => {
     }
   }
 
-  // --- 处理偏好设置 --- (新增)
+  // --- 处理偏好设置 ---
   const onFinishPreferences = async (values: UserPreference) => {
     setPreferenceLoading(true)
-    setPreferenceSuccess(false) // 重置成功状态
+    setPreferenceSuccess(false)
     try {
-      console.log('提交偏好设置:', values)
-      // 注意：主题切换可能需要特殊处理，因为它也由 ThemeContext 控制
-      // 这里我们先直接更新后端
-      await updateUserPreferences(values)
+      await updatePreferences(values)
       setPreferenceSuccess(true)
       message.success('偏好设置已更新')
-      // 如果主题被更改，也调用 context 的切换函数 (可选，取决于设计)
       if (values.theme && values.theme !== theme) {
-        // contextToggleTheme(); // 调用 context 的切换函数，如果需要立即反映
-        // 或者提示用户刷新页面以应用主题
-        message.info('主题设置已更新，可能需要刷新页面查看效果。')
+        message.info('主题设置已更新')
       }
-      // 短暂显示成功信息
       setTimeout(() => setPreferenceSuccess(false), 3000)
     } catch (error: any) {
       message.error(error.message || '偏好设置更新失败，请稍后再试')
@@ -162,13 +137,19 @@ const SettingsPage: React.FC = () => {
     }
   }
 
-  // --- 主题切换处理 --- (修改)
-  // 包装原始的 toggleTheme，以便在切换时也更新表单值
-  const handleThemeToggle = (checked: boolean) => {
+  // --- 主题切换处理 ---
+  const handleThemeToggle = async (checked: boolean) => {
     const newTheme = checked ? 'dark' : 'light'
     contextToggleTheme() // 调用原始 context 方法切换主题
-    preferenceForm.setFieldsValue({ theme: newTheme }) // 更新表单中的值
-    // 注意：这里不立即调用保存，让用户点击保存按钮
+
+    try {
+      await updatePreferences({ theme: newTheme })
+      preferenceForm.setFieldsValue({ theme: newTheme })
+      navigate('/settings')
+    } catch (error) {
+      message.error('主题更新失败')
+      console.error('主题更新错误:', error)
+    }
   }
 
   // 显示密码修改确认对话框
@@ -193,196 +174,6 @@ const SettingsPage: React.FC = () => {
   const tabItems = [
     {
       key: '1',
-      label: (
-        <span>
-          <LockOutlined /> 账号安全
-        </span>
-      ),
-      children: (
-        <Card
-          title={<Title level={4}>修改密码</Title>}
-          bordered={false}
-          className="settings-card"
-        >
-          {passwordSuccess && (
-            <Alert
-              message="密码修改成功"
-              type="success"
-              showIcon
-              icon={<CheckCircleFilled />}
-              style={{ marginBottom: 24 }}
-            />
-          )}
-
-          {passwordError && (
-            <Alert
-              message="密码修改失败"
-              description={passwordError}
-              type="error"
-              showIcon
-              closable
-              style={{ marginBottom: 24 }}
-              onClose={() => setPasswordError(null)}
-            />
-          )}
-
-          <Form
-            form={passwordForm}
-            layout="vertical"
-            requiredMark="optional"
-          >
-            <Form.Item
-              label="当前密码"
-              name="currentPassword"
-              rules={[{ required: true, message: '请输入当前密码' }]}
-            >
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder="请输入当前密码"
-              />
-            </Form.Item>
-            <Form.Item
-              label="新密码"
-              name="newPassword"
-              rules={[
-                { required: true, message: '请输入新密码' },
-                { min: 8, message: '密码长度不能小于8个字符' },
-                {
-                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-                  message: '密码需包含大小写字母和数字',
-                },
-              ]}
-              extra="密码长度至少为8个字符，且必须包含大小写字母和数字"
-            >
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder="请输入新密码"
-              />
-            </Form.Item>
-            <Form.Item
-              label="确认新密码"
-              name="confirmPassword"
-              dependencies={['newPassword']}
-              hasFeedback
-              rules={[
-                { required: true, message: '请确认新密码' },
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    if (!value || getFieldValue('newPassword') === value) {
-                      return Promise.resolve()
-                    }
-                    return Promise.reject(new Error('两次输入的密码不一致'))
-                  },
-                }),
-              ]}
-            >
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder="请再次输入新密码"
-              />
-            </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                onClick={showPasswordConfirm}
-                loading={passwordLoading}
-              >
-                修改密码
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-    {
-      key: '2',
-      label: (
-        <span>
-          <BellOutlined /> 通知设置
-        </span>
-      ),
-      children: (
-        <Card
-          title={<Title level={4}>通知偏好</Title>}
-          bordered={false}
-          className="settings-card"
-        >
-          {notificationSuccess && (
-            <Alert
-              message="通知设置已保存"
-              type="success"
-              showIcon
-              icon={<CheckCircleFilled />}
-              style={{ marginBottom: 24 }}
-            />
-          )}
-          <Form<UserPreference> // 指定泛型类型
-            form={notificationForm}
-            layout="vertical"
-            onFinish={onFinishNotifications}
-            // initialValues 不再需要，由 useEffect 设置
-          >
-            <Form.Item
-              name="emailNotifications" // 匹配 DTO/Entity
-              label="邮件通知"
-              valuePropName="checked" // Switch 使用 checked
-              extra="接收重要的系统通知和更新"
-            >
-              <Switch />
-            </Form.Item>
-
-            <Form.Item
-              name="taskReminderFrequency" // 匹配 DTO/Entity
-              label="任务提醒频率"
-              extra="选择接收学习任务提醒的频率"
-            >
-              <Select
-                style={{ width: '50%' }}
-                placeholder="选择频率"
-              >
-                <Option value="daily">每天</Option>
-                <Option value="weekly">每周</Option>
-                <Option value="never">从不</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="communityUpdatesEnabled" // 匹配 DTO/Entity
-              label="社区动态通知"
-              valuePropName="checked"
-              extra="接收来自社区的更新、互动和回复"
-            >
-              <Switch />
-            </Form.Item>
-
-            <Form.Item
-              name="achievementNotificationsEnabled" // 匹配 DTO/Entity
-              label="成就解锁通知"
-              valuePropName="checked"
-              extra="当你解锁新成就时收到通知"
-            >
-              <Switch />
-            </Form.Item>
-
-            <Divider />
-
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SaveOutlined />}
-                loading={notificationLoading}
-              >
-                保存通知设置
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-    {
-      key: '3',
       label: (
         <span>
           <SettingOutlined /> 偏好设置
@@ -515,6 +306,196 @@ const SettingsPage: React.FC = () => {
                 loading={preferenceLoading} // 使用偏好设置加载状态
               >
                 保存偏好设置
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      ),
+    },
+    {
+      key: '2',
+      label: (
+        <span>
+          <LockOutlined /> 账号安全
+        </span>
+      ),
+      children: (
+        <Card
+          title={<Title level={4}>修改密码</Title>}
+          bordered={false}
+          className="settings-card"
+        >
+          {passwordSuccess && (
+            <Alert
+              message="密码修改成功"
+              type="success"
+              showIcon
+              icon={<CheckCircleFilled />}
+              style={{ marginBottom: 24 }}
+            />
+          )}
+
+          {passwordError && (
+            <Alert
+              message="密码修改失败"
+              description={passwordError}
+              type="error"
+              showIcon
+              closable
+              style={{ marginBottom: 24 }}
+              onClose={() => setPasswordError(null)}
+            />
+          )}
+
+          <Form
+            form={passwordForm}
+            layout="vertical"
+            requiredMark="optional"
+          >
+            <Form.Item
+              label="当前密码"
+              name="currentPassword"
+              rules={[{ required: true, message: '请输入当前密码' }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="请输入当前密码"
+              />
+            </Form.Item>
+            <Form.Item
+              label="新密码"
+              name="newPassword"
+              rules={[
+                { required: true, message: '请输入新密码' },
+                { min: 8, message: '密码长度不能小于8个字符' },
+                {
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+                  message: '密码需包含大小写字母和数字',
+                },
+              ]}
+              extra="密码长度至少为8个字符，且必须包含大小写字母和数字"
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="请输入新密码"
+              />
+            </Form.Item>
+            <Form.Item
+              label="确认新密码"
+              name="confirmPassword"
+              dependencies={['newPassword']}
+              hasFeedback
+              rules={[
+                { required: true, message: '请确认新密码' },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('newPassword') === value) {
+                      return Promise.resolve()
+                    }
+                    return Promise.reject(new Error('两次输入的密码不一致'))
+                  },
+                }),
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="请再次输入新密码"
+              />
+            </Form.Item>
+            <Form.Item>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                onClick={showPasswordConfirm}
+                loading={passwordLoading}
+              >
+                修改密码
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      ),
+    },
+    {
+      key: '3',
+      label: (
+        <span>
+          <BellOutlined /> 通知设置
+        </span>
+      ),
+      children: (
+        <Card
+          title={<Title level={4}>通知偏好</Title>}
+          bordered={false}
+          className="settings-card"
+        >
+          {notificationSuccess && (
+            <Alert
+              message="通知设置已保存"
+              type="success"
+              showIcon
+              icon={<CheckCircleFilled />}
+              style={{ marginBottom: 24 }}
+            />
+          )}
+          <Form<UserPreference> // 指定泛型类型
+            form={notificationForm}
+            layout="vertical"
+            onFinish={onFinishNotifications}
+            // initialValues 不再需要，由 useEffect 设置
+          >
+            <Form.Item
+              name="emailNotifications" // 匹配 DTO/Entity
+              label="邮件通知"
+              valuePropName="checked" // Switch 使用 checked
+              extra="接收重要的系统通知和更新"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Form.Item
+              name="taskReminderFrequency" // 匹配 DTO/Entity
+              label="任务提醒频率"
+              extra="选择接收学习任务提醒的频率"
+            >
+              <Select
+                style={{ width: '50%' }}
+                placeholder="选择频率"
+              >
+                <Option value="daily">每天</Option>
+                <Option value="weekly">每周</Option>
+                <Option value="never">从不</Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              name="communityUpdatesEnabled" // 匹配 DTO/Entity
+              label="社区动态通知"
+              valuePropName="checked"
+              extra="接收来自社区的更新、互动和回复"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Form.Item
+              name="achievementNotificationsEnabled" // 匹配 DTO/Entity
+              label="成就解锁通知"
+              valuePropName="checked"
+              extra="当你解锁新成就时收到通知"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Divider />
+
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SaveOutlined />}
+                loading={notificationLoading}
+              >
+                保存通知设置
               </Button>
             </Form.Item>
           </Form>

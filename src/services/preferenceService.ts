@@ -23,14 +23,17 @@ export const getUserPreferences = async (): Promise<UserPreference> => {
     try {
         const response = await apiClient.get('/user/preferences');
 
-        if (response.data?.code === 200 && response.data?.data) {
-            return response.data.data;
-        } else {
-            // 如果 data 为空，可能表示用户还没有偏好设置，返回空对象或默认值
-            if (response.data?.code === 200 && !response.data?.data) {
-                console.warn('No user preferences found, returning empty object.');
-                return {}; // 或者返回一个包含默认值的对象
+        if (response.data?.code === 200) {
+            if (response.data?.data) {
+                return response.data.data;
+            } else {
+                // 如果数据为空，调用更新接口来触发后端初始化
+                console.warn('未找到用户偏好设置，正在请求初始化...');
+                // 调用更新接口，传入空对象触发后端的默认值初始化
+                const initResponse = await updateUserPreferences({});
+                return initResponse;
             }
+        } else {
             throw new Error(response.data?.message || '获取偏好设置失败');
         }
     } catch (error) {

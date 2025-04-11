@@ -32,22 +32,22 @@ import './Dashboard.css'
 const { Title, Text } = Typography
 
 // Helper function to find related items
-const findGoalsForCourse = (courseId: string): Goal[] =>
-  mockGoalData.filter((g) => g.courseId === courseId)
+const findGoalsForCourse = (courseId: number): Goal[] =>
+  mockGoalData.filter((g) => g.subjectId === courseId)
 
-const findTasksForGoal = (goalId: string): Task[] =>
+const findTasksForGoal = (goalId: number): Task[] =>
   mockTaskData.filter((t) => t.goalId === goalId)
 
 // Helper to render Goal Panel Header with progress
 const renderGoalPanelHeader = (goal: Goal) => {
   const tasks = findTasksForGoal(goal.id)
-  const completedTasks = tasks.filter((t) => t.status === '已完成').length
+  const completedTasks = tasks.filter((t) => t.status === 'COMPLETED').length
   const progressPercent =
     tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0
 
   return (
     <div className="goal-panel-header">
-      <Text strong>{goal.name}</Text>
+      <Text strong>{goal.title}</Text>
       <Space>
         <Text
           type="secondary"
@@ -89,10 +89,10 @@ const GoalTasks: React.FC<{ goal: Goal }> = ({ goal }) => {
           <List.Item.Meta
             title={
               <Text
-                delete={task.status === '已完成'}
+                delete={task.status === 'COMPLETED'}
                 className="task-name"
               >
-                {task.name}
+                {task.title}
               </Text>
             }
             description={
@@ -100,15 +100,15 @@ const GoalTasks: React.FC<{ goal: Goal }> = ({ goal }) => {
                 type="secondary"
                 className="task-deadline"
               >
-                截止: {task.deadline}
+                截止: {task.dueDate}
               </Text>
             }
           />
           <Tag
             color={
-              task.status === '进行中'
+              task.status === 'IN_PROGRESS'
                 ? 'processing'
-                : task.status === '已完成'
+                : task.status === 'COMPLETED'
                 ? 'success'
                 : 'default'
             }
@@ -157,15 +157,17 @@ const Dashboard: React.FC = () => {
   // 使用 useMemo 优化数据计算
   const { activeCourses, statistics } = useMemo(() => {
     const activeCourseIds = new Set(
-      mockGoalData.filter((g) => g.status === '进行中').map((g) => g.courseId),
+      mockGoalData
+        .filter((g) => g.status === 'ONGOING')
+        .map((g) => g.subjectId),
     )
 
     const inProgressTasks = mockTaskData.filter(
-      (t) => t.status === '进行中',
+      (t) => t.status === 'IN_PROGRESS',
     ).length
     const totalGoals = mockGoalData.length
     const completedGoals = mockGoalData.filter(
-      (g) => g.status === '已完成',
+      (g) => g.status === 'COMPLETED',
     ).length
     const completionRate =
       totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0

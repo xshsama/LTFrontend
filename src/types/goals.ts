@@ -1,35 +1,73 @@
-export type Priority = '高' | '中' | '低';
-export type Status = '进行中' | '未开始' | '已完成';
+export type Priority = 'HIGH' | 'MEDIUM' | 'LOW' | 'URGENT';
+export type GoalStatus = 'ONGOING' | 'COMPLETED' | 'EXPIRED' | 'NO_STARTED';
+export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
 export type AchievementType = '目标' | '任务';
 
-export interface Goal {
-    id: string;
-    key: string;
+export interface Subject {
+    id: number;
+    title: string;
+    description?: string;
+    imageUrl?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Category {
+    id: number;
     name: string;
-    deadline: string;
+    description?: string;
+    subjectId: number;
+}
+
+export interface Goal {
+    id: number;
+    title: string;
+    deadline?: string;
+    status: GoalStatus;
+    completionDate?: string;
     priority: Priority;
-    status: Status;
-    tags: string[];
-    courseId: string;
+    progress: number;
+    expectedHours?: number;
+    actualHours: number;
+    createdAt: string;
+    updatedAt: string;
+    subjectId: number;
+    categoryId?: number;
+    // 标签会从关联的任务中获取，而不是直接存储
 }
 
 export interface Task {
-    key: string;
-    name: string;
-    deadline: string;
+    id: number;
+    title: string;
+    description?: string;
+    dueDate?: string;
+    status: TaskStatus;
+    completionDate?: string;
     priority: Priority;
-    status: Status;
-    relatedGoal: string;
-    goalId: string;
-    tags: string[];
+    estimatedTimeMinutes?: number;
+    actualTimeMinutes: number;
+    createdAt: string;
+    updatedAt: string;
+    goalId: number;
+    tags: Tag[]; // 只有Task直接关联标签
+}
+
+export interface Tag {
+    id: number;
+    name: string;
+    color?: string;
+    userId: number;
 }
 
 export interface Achievement {
-    key: string;
-    name: string;
+    id: number;
+    title: string;
     completionDate: string;
     type: AchievementType;
-    relatedItem: string;
+    relatedItemId: number;
+    relatedItemTitle: string;
     points: number;
     description?: string;
+    createdAt: string;
+    updatedAt: string;
 }

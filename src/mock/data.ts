@@ -3,7 +3,7 @@ import { Achievement, Goal, Task } from '../types/goals';
 
 export const mockCourseData: Course[] = [
     {
-        id: 'course1',
+        id: 1,
         name: 'React 高级教程',
         description: 'React 高级特性与最佳实践',
         instructor: '张教授',
@@ -15,7 +15,7 @@ export const mockCourseData: Course[] = [
         tags: ['React', 'TypeScript', '前端框架']
     },
     {
-        id: 'course2',
+        id: 2,
         name: 'Spring Boot 实战',
         description: 'Spring Boot 企业级应用开发',
         instructor: '李教授',
@@ -30,58 +30,115 @@ export const mockCourseData: Course[] = [
 
 export const mockGoalData: Goal[] = [
     {
-        id: 'goal1',
-        key: 'goal1',
-        name: '完成 React Hooks 学习',
+        id: 1,
+        title: '完成 React Hooks 学习',
         deadline: '2025-04-30',
-        priority: '高',
-        status: '进行中',
-        tags: ['React', 'Hooks'],
-        courseId: 'course1'
+        priority: 'HIGH',
+        status: 'ONGOING',
+        progress: 45,
+        expectedHours: 20,
+        actualHours: 9,
+        createdAt: '2025-04-01T08:00:00Z',
+        updatedAt: '2025-04-10T15:30:00Z',
+        subjectId: 1
     },
     {
-        id: 'goal2',
-        key: 'goal2',
-        name: '掌握 Spring Security',
+        id: 2,
+        title: '掌握 Spring Security',
         deadline: '2025-05-31',
-        priority: '中',
-        status: '进行中',
-        tags: ['Spring Boot', '安全'],
-        courseId: 'course2'
+        priority: 'MEDIUM',
+        status: 'ONGOING',
+        progress: 30,
+        expectedHours: 15,
+        actualHours: 4,
+        createdAt: '2025-04-02T09:00:00Z',
+        updatedAt: '2025-04-10T16:45:00Z',
+        subjectId: 2
     }
 ];
 
 export const mockTaskData: Task[] = [
     {
-        key: 'task1',
-        name: '学习 useEffect 原理',
-        deadline: '2025-04-15',
-        priority: '高',
-        status: '进行中',
-        relatedGoal: '完成 React Hooks 学习',
-        goalId: 'goal1',
-        tags: ['React', 'Hooks']
+        id: 1,
+        title: '学习 useEffect 钩子',
+        description: '深入理解 useEffect 的使用场景和注意事项',
+        dueDate: '2025-04-15',
+        priority: 'HIGH',
+        status: 'IN_PROGRESS',
+        completionDate: undefined,
+        estimatedTimeMinutes: 120,
+        actualTimeMinutes: 45,
+        goalId: 1,
+        createdAt: '2025-04-01T08:30:00Z',
+        updatedAt: '2025-04-10T15:30:00Z',
+        tags: [
+            {
+                id: 1,
+                name: 'React',
+                color: 'blue',
+                userId: 1
+            },
+            {
+                id: 2,
+                name: 'Hooks',
+                color: 'green',
+                userId: 1
+            }
+        ]
     },
     {
-        key: 'task2',
-        name: '完成用户认证模块',
-        deadline: '2025-05-15',
-        priority: '高',
-        status: '进行中',
-        relatedGoal: '掌握 Spring Security',
-        goalId: 'goal2',
-        tags: ['Spring Boot', '认证']
+        id: 2,
+        title: '实现用户认证',
+        description: '使用 Spring Security 实现基本的用户认证功能',
+        dueDate: '2025-05-15',
+        priority: 'HIGH',
+        status: 'NOT_STARTED',
+        completionDate: undefined,
+        estimatedTimeMinutes: 180,
+        actualTimeMinutes: 0,
+        goalId: 2,
+        createdAt: '2025-04-02T09:30:00Z',
+        updatedAt: '2025-04-10T16:45:00Z',
+        tags: [
+            {
+                id: 3,
+                name: '认证',
+                color: 'orange',
+                userId: 1
+            },
+            {
+                id: 4,
+                name: '安全',
+                color: 'red',
+                userId: 1
+            }
+        ]
     }
 ];
 
 export const mockAchievementData: Achievement[] = [
     {
-        key: 'achievement1',
-        name: '完成 React Router 学习',
+        id: 1,
+        title: '完成 React Router 学习',
         completionDate: '2025-03-30',
         type: '目标',
-        relatedItem: 'React 路由管理',
+        relatedItemId: 1,
+        relatedItemTitle: 'React 路由管理',
         points: 100,
-        description: '掌握了 React Router 的核心概念和实践应用'
+        description: '掌握了 React Router 的核心概念和实践应用',
+        createdAt: '2025-03-30T10:00:00Z',
+        updatedAt: '2025-03-30T10:00:00Z'
+    },
+    {
+        id: 2,
+        title: '实现数据库配置',
+        completionDate: '2025-03-25',
+        type: '任务',
+        relatedItemId: 2,
+        relatedItemTitle: '配置 Spring Data JPA',
+        points: 50,
+        description: '成功配置并测试了数据库连接',
+        createdAt: '2025-03-25T14:30:00Z',
+        updatedAt: '2025-03-25T14:30:00Z'
     }
 ];

@@ -6,6 +6,10 @@ import {
   Routes,
 } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext' // 导入AuthProvider
+import {
+  PreferenceProvider,
+  usePreferences,
+} from './contexts/PreferenceContext' // 导入PreferenceProvider
 import { ThemeProvider, useTheme } from './contexts/ThemeContext' // Import ThemeProvider and useTheme
 import MainLayout from './layouts/MainLayout'
 import Community from './pages/Community'
@@ -16,12 +20,19 @@ import Objectives from './pages/Objectives'
 import ProfilePage from './pages/ProfilePage' // 导入个人资料页面
 import Progress from './pages/Progress'
 import RegisterPage from './pages/RegisterPage' // 导入注册页面
-import Resources from './pages/Resources'
 import Settings from './pages/Settings'
 
-// Inner component to access theme context for ConfigProvider
+// Inner component to access theme context and preferences for ConfigProvider
 const ThemedApp: React.FC = () => {
   const { theme } = useTheme() // Get theme from context
+  const { preferences } = usePreferences() // Get preferences
+
+  // 根据默认页面设置重定向
+  const getDefaultRoute = () => {
+    return preferences.defaultPage
+      ? `/${preferences.defaultPage}`
+      : '/dashboard'
+  }
 
   return (
     <ConfigProvider
@@ -69,10 +80,6 @@ const ThemedApp: React.FC = () => {
                   element={<Progress />}
                 />
                 <Route
-                  path="resources"
-                  element={<Resources />}
-                />
-                <Route
                   path="community"
                   element={<Community />}
                 />
@@ -90,7 +97,7 @@ const ThemedApp: React.FC = () => {
                   element={
                     <Navigate
                       replace
-                      to="/dashboard"
+                      to={getDefaultRoute()}
                     />
                   }
                 />
@@ -109,11 +116,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        {' '}
-        {/* 添加 AuthProvider */}
-        <Router>
-          <ThemedApp /> {/* Render the inner component */}
-        </Router>
+        <PreferenceProvider>
+          <Router>
+            <ThemedApp />
+          </Router>
+        </PreferenceProvider>
       </AuthProvider>
     </ThemeProvider>
   )

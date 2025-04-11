@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, AxiosRequestHeaders } from 'axios';
 import { removeCookie } from '../utils/cookies';
 
 const API_URL = 'http://localhost:8080/api';
@@ -105,6 +105,11 @@ apiClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('authToken');
         if (token) {
+            if (!config.headers) {
+                config.headers = {
+                    'Content-Type': 'application/json'
+                } as AxiosRequestHeaders;
+            }
             config.headers['Authorization'] = `Bearer ${token}`; // 确保使用 Bearer 格式
         }
         return config;

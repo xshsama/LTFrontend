@@ -29,6 +29,13 @@
   border-color: #ffa39e;
 }
 
+.priority-tag.urgent {
+  color: #ffffff;
+  background: #ff4d4f;
+  border-color: #ff4d4f;
+  font-weight: 600;
+}
+
 .priority-tag.medium {
   color: #096dd9;
   background: #e6f7ff;

@@ -18,8 +18,8 @@ const AchievementsTable: React.FC<AchievementsTableProps> = ({
   const columns: ColumnsType<Achievement> = [
     {
       title: '成就名称',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'title',
+      key: 'title',
       render: (text: string) => <Link>{text}</Link>,
     },
     {
@@ -29,6 +29,7 @@ const AchievementsTable: React.FC<AchievementsTableProps> = ({
       sorter: (a, b) =>
         new Date(a.completionDate).getTime() -
         new Date(b.completionDate).getTime(),
+      render: (date: string) => new Date(date).toLocaleDateString('zh-CN'),
     },
     {
       title: '类型',
@@ -45,9 +46,13 @@ const AchievementsTable: React.FC<AchievementsTableProps> = ({
     },
     {
       title: '关联项',
-      dataIndex: 'relatedItem',
-      key: 'relatedItem',
-      render: (text: string) => <Link>{text}</Link>,
+      dataIndex: 'relatedItemTitle',
+      key: 'relatedItemTitle',
+      render: (text: string, record: Achievement) => (
+        <Tooltip title={`ID: ${record.relatedItemId}`}>
+          <Link>{text}</Link>
+        </Tooltip>
+      ),
     },
     {
       title: '获得积分',
