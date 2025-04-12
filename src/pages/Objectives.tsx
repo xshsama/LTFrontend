@@ -9,15 +9,13 @@ import GoalsTable from '../components/tables/GoalsTable'
 import TasksTable from '../components/tables/TasksTable'
 import { useAuth } from '../contexts/AuthContext'
 import { mockAchievementData, mockGoalData, mockTaskData } from '../mock/data'
+import { createGoal, getGoals } from '../services/goalService'
 import {
-  createGoal,
-  createTask,
   getCategories,
-  getGoals,
   getSubjects,
   getTags,
-  getTasks,
 } from '../services/objectiveService'
+import { createTask, getTasksByGoal } from '../services/taskService'
 import {
   Achievement,
   Category,
@@ -48,28 +46,23 @@ const ObjectivesPage: React.FC = () => {
   const [taskModalVisible, setTaskModalVisible] = useState(false)
   const [formSubmitting, setFormSubmitting] = useState(false)
 
-  // 在组件挂载时获取所有必要数据
+  // 在组件挂载时获取学科、分类和标签数据
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [subjectsData, categoriesData, tagsData, goalsData, tasksData] =
-          await Promise.all([
-            getSubjects(),
-            getCategories(),
-            getTags(),
-            getGoals(),
-            getTasks(),
-          ])
+        const [subjectsData, categoriesData, tagsData] = await Promise.all([
+          getSubjects(),
+          getCategories(),
+          getTags(),
+        ])
 
         setSubjects(subjectsData)
         setCategories(categoriesData)
         setAvailableTags(tagsData)
-        setGoals(goalsData)
-        setTasks(tasksData)
       } catch (error) {
-        console.error('获取数据失败:', error)
-        message.error('获取数据失败，请重试！')
+        console.error('获取基础数据失败:', error)
+        message.error('获取基础数据失败，请重试！')
       } finally {
         setLoading(false)
       }
@@ -79,6 +72,55 @@ const ObjectivesPage: React.FC = () => {
       fetchData()
     }
   }, [isAuthenticated])
+
+  // 获取所有目标
+  useEffect(() => {
+    const fetchGoals = async () => {
+      setLoading(true)
+      try {
+        const goalsData = await getGoals()
+        setGoals(goalsData)
+      } catch (error) {
+        console.error('获取目标数据失败:', error)
+        message.error('获取目标数据失败，请重试！')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchGoals()
+    }
+  }, [isAuthenticated])
+
+  // 获取选定目标的任务列表
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!selectedGoalId) return
+
+      setLoading(true)
+      try {
+        const tasksData = await getTasksByGoal(selectedGoalId)
+        setTasks(tasksData)
+      } catch (error) {
+        console.error(`获取目标(ID:${selectedGoalId})的任务列表失败:`, error)
+        message.error('获取任务数据失败，请重试！')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (isAuthenticated && selectedGoalId) {
+      fetchTasks()
+    }
+  }, [isAuthenticated, selectedGoalId])
+
+  // 处理选择目标的回调
+  const handleGoalSelect = (goalId: number) => {
+    setSelectedGoalId(goalId)
+  }
 
   // 处理登录按钮点击
   const handleLogin = () => {
@@ -182,8 +224,7 @@ const ObjectivesPage: React.FC = () => {
           loading={loading}
           taskTags={taskTagsByGoal}
           onRowClick={(goal) => {
-            console.log('Clicked goal:', goal)
-            // 这里可以添加点击目标时的处理逻辑
+            setSelectedGoalId(goal.id)
           }}
         />
       ),

@@ -4,11 +4,8 @@ import apiClient from './apiService';
 // 获取学科列表
 export const getSubjects = async (): Promise<Subject[]> => {
     try {
-        const response = await apiClient.get('/subjects');
-        if (response.data?.code === 200) {
-            return response.data.data;
-        }
-        throw new Error(response.data?.message || '获取学科列表失败');
+        const response = await apiClient.get('/api/subjects');
+        return response.data;
     } catch (error) {
         console.error('获取学科列表失败:', error);
         throw error;
@@ -18,12 +15,9 @@ export const getSubjects = async (): Promise<Subject[]> => {
 // 获取分类列表
 export const getCategories = async (subjectId?: number): Promise<Category[]> => {
     try {
-        const url = subjectId ? `/categories?subjectId=${subjectId}` : '/categories';
+        const url = subjectId ? `/api/categories?subjectId=${subjectId}` : '/api/categories';
         const response = await apiClient.get(url);
-        if (response.data?.code === 200) {
-            return response.data.data;
-        }
-        throw new Error(response.data?.message || '获取分类列表失败');
+        return response.data;
     } catch (error) {
         console.error('获取分类列表失败:', error);
         throw error;
@@ -33,11 +27,8 @@ export const getCategories = async (subjectId?: number): Promise<Category[]> => 
 // 获取标签列表
 export const getTags = async (): Promise<Tag[]> => {
     try {
-        const response = await apiClient.get('/tags');
-        if (response.data?.code === 200) {
-            return response.data.data;
-        }
-        throw new Error(response.data?.message || '获取标签列表失败');
+        const response = await apiClient.get('/api/tags');
+        return response.data;
     } catch (error) {
         console.error('获取标签列表失败:', error);
         throw error;

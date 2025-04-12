@@ -39,6 +39,14 @@ const GoalForm: React.FC<GoalFormProps> = ({
       deadline: values.deadline
         ? values.deadline.format('YYYY-MM-DD')
         : undefined,
+      completionDate: values.completionDate
+        ? values.completionDate.format('YYYY-MM-DD')
+        : undefined,
+      status: values.status || 'NO_STARTED',
+      priority: values.priority || 'MEDIUM',
+      progress: values.progress || 0,
+      actualHours: values.actualHours || 0,
+      expectedHours: values.expectedHours,
     }
     onFinish(formattedValues)
   }

@@ -82,10 +82,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
       completionDate: values.completionDate
         ? values.completionDate.format('YYYY-MM-DD')
         : undefined,
+      status: values.status || 'NOT_STARTED',
+      priority: values.priority || 'MEDIUM',
+      actualTimeMinutes: values.actualTimeMinutes || 0,
+      estimatedTimeMinutes: values.estimatedTimeMinutes,
       tags: selectedTagIds.map(
         (id) => availableTags.find((tag) => tag.id === id)!,
       ),
-      actualTimeMinutes: values.actualTimeMinutes || 0,
     }
     onFinish(formattedValues)
   }

@@ -19,6 +19,12 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
   taskTags = {},
   onRowClick,
 }) => {
+  // 添加行点击处理
+  const handleRowClick = (record: Goal) => {
+    if (onRowClick) {
+      onRowClick(record)
+    }
+  }
   const columns: ColumnsType<Goal> = [
     {
       title: '目标名称',
@@ -183,6 +189,10 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
           showSizeChanger: true,
           showQuickJumper: true,
         }}
+        onRow={(record) => ({
+          onClick: () => handleRowClick(record),
+          className: 'clickable-row',
+        })}
       />
     </div>
   )
