@@ -1,8 +1,8 @@
-import { Tag as AntdTag, Space, Table, Tooltip, Typography } from 'antd'
+import { Space, Table, Tag, Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React from 'react'
 import '../../styles/tables.css'
-import { Priority, Tag, Task, TaskStatus } from '../../types/goals'
+import { Priority, Task, TaskStatus } from '../../types/goals'
 
 const { Link } = Typography
 
@@ -17,6 +17,13 @@ const TasksTable: React.FC<TasksTableProps> = ({
   loading = false,
   onRowClick,
 }) => {
+  // 添加行点击处理
+  const handleRowClick = (record: Task) => {
+    if (onRowClick) {
+      onRowClick(record)
+    }
+  }
+
   const columns: ColumnsType<Task> = [
     {
       title: '任务名称',
@@ -65,7 +72,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
             ? 'urgent'
             : 'low'
         }`
-        return <AntdTag className={className}>{priorityMap[priority]}</AntdTag>
+        return <Tag className={className}>{priorityMap[priority]}</Tag>
       },
     },
     {
@@ -97,35 +104,61 @@ const TasksTable: React.FC<TasksTableProps> = ({
         } else if (status === 'OVERDUE') {
           color = 'error'
         } else if (status === 'CANCELLED') {
-          color = 'default'
+          color = 'warning'
         }
 
-        return <AntdTag color={color}>{statusMap[status]}</AntdTag>
+        return <Tag color={color}>{statusMap[status]}</Tag>
+      },
+    },
+    {
+      title: '预估时间',
+      dataIndex: 'estimatedTimeMinutes',
+      key: 'estimatedTimeMinutes',
+      render: (time: number | undefined, record: Task) => {
+        if (!time) return '未估计'
+        const hours = Math.floor(time / 60)
+        const minutes = time % 60
+        const actualTime = record.actualTimeMinutes || 0
+        const actualHours = Math.floor(actualTime / 60)
+        const actualMinutes = actualTime % 60
+
+        return (
+          <Tooltip title={`已投入: ${actualHours}小时${actualMinutes}分钟`}>
+            {hours > 0 ? `${hours}小时` : ''}
+            {minutes > 0 ? `${minutes}分钟` : hours > 0 ? '' : '0分钟'}
+          </Tooltip>
+        )
       },
     },
     {
       title: '标签',
       key: 'tags',
       dataIndex: 'tags',
-      render: (tags: Tag[]) => (
+      render: (_, record: Task) => (
         <div className="tag-list">
-          {tags?.slice(0, 3).map((tag) => (
-            <AntdTag
-              color={tag.color || 'blue'}
-              key={tag.id}
-            >
-              {tag.name}
-            </AntdTag>
-          ))}
-          {tags && tags.length > 3 && (
-            <Tooltip
-              title={tags
-                .slice(3)
-                .map((tag) => tag.name)
-                .join(', ')}
-            >
-              <AntdTag>+{tags.length - 3}</AntdTag>
-            </Tooltip>
+          {record.tags && record.tags.length > 0 ? (
+            <>
+              {record.tags.slice(0, 3).map((tag) => (
+                <Tag
+                  color={tag.color || 'blue'}
+                  key={tag.id}
+                >
+                  {tag.name}
+                </Tag>
+              ))}
+              {record.tags.length > 3 && (
+                <Tooltip
+                  title={record.tags
+                    .slice(3)
+                    .map((tag) => tag.name)
+                    .join(', ')}
+                >
+                  <Tag>+{record.tags.length - 3}</Tag>
+                </Tooltip>
+              )}
+            </>
+          ) : (
+            <span className="no-tags">无标签</span>
           )}
         </div>
       ),
@@ -149,12 +182,16 @@ const TasksTable: React.FC<TasksTableProps> = ({
         columns={columns}
         dataSource={data}
         loading={loading}
-        rowKey="key"
+        rowKey="id"
         pagination={{
           defaultPageSize: 10,
           showSizeChanger: true,
           showQuickJumper: true,
         }}
+        onRow={(record) => ({
+          onClick: () => handleRowClick(record),
+          className: 'clickable-row',
+        })}
       />
     </div>
   )

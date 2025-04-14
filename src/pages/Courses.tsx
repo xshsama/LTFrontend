@@ -5,10 +5,21 @@ import {
   LoginOutlined,
   PlusOutlined,
 } from '@ant-design/icons'
-import { Button, Result, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import {
+  Button,
+  message,
+  Modal,
+  Result,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import SubjectForm from '../components/forms/SubjectForm'
 import { useAuth } from '../contexts/AuthContext'
 
 const { Title } = Typography
@@ -103,6 +114,34 @@ const courseColumns: ColumnsType<Course> = [
 const Courses: React.FC = () => {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const [modalVisible, setModalVisible] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false)
+
+  // 处理表单提交
+  const handleSubmit = async (data: any) => {
+    try {
+      setLoading(true)
+      // TODO: 调用API添加课程
+      console.log('提交数据:', data)
+      message.success('课程添加成功!')
+      setModalVisible(false)
+    } catch (error) {
+      console.error('添加课程失败:', error)
+      message.error('添加课程失败，请稍后再试!')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 打开模态框
+  const handleOpenModal = () => {
+    setModalVisible(true)
+  }
+
+  // 关闭模态框
+  const handleCloseModal = () => {
+    setModalVisible(false)
+  }
 
   // 处理登录按钮点击
   const handleLogin = () => {
@@ -150,6 +189,7 @@ const Courses: React.FC = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
+          onClick={handleOpenModal}
         >
           添加课程/科目
         </Button>
@@ -158,6 +198,19 @@ const Courses: React.FC = () => {
         columns={courseColumns}
         dataSource={courseData}
       />
+
+      <Modal
+        title="添加课程/科目"
+        open={modalVisible}
+        onCancel={handleCloseModal}
+        footer={null}
+        destroyOnClose
+      >
+        <SubjectForm
+          onSubmit={handleSubmit}
+          onCancel={handleCloseModal}
+        />
+      </Modal>
     </div>
   )
 }
