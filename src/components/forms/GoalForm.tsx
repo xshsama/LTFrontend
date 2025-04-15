@@ -1,3 +1,4 @@
+import { PlusOutlined } from '@ant-design/icons'
 import {
   Button,
   DatePicker,
@@ -6,9 +7,11 @@ import {
   InputNumber,
   Select,
   Space,
+  Tag,
+  theme,
 } from 'antd'
 import dayjs from 'dayjs'
-import React from 'react'
+import React, { useState } from 'react'
 import { Category, Goal } from '../../types/goals'
 
 interface GoalFormProps {
@@ -28,7 +31,12 @@ const GoalForm: React.FC<GoalFormProps> = ({
   onCancel,
   loading = false,
 }) => {
+  const { token } = theme.useToken()
   const [form] = Form.useForm()
+  const [tags, setTags] = useState<string[]>(initialValues?.tags || [])
+  const [inputVisible, setInputVisible] = useState(false)
+  const [inputValue, setInputValue] = useState('')
+
   const filteredCategories = initialValues?.subjectId
     ? categories.filter((cat) => cat.subjectId === initialValues.subjectId)
     : []
@@ -47,8 +55,31 @@ const GoalForm: React.FC<GoalFormProps> = ({
       progress: values.progress || 0,
       actualHours: values.actualHours || 0,
       expectedHours: values.expectedHours,
+      tags: tags, // 将标签数组添加到表单提交数据中
     }
     onFinish(formattedValues)
+  }
+
+  // 标签相关方法
+  const handleClose = (removedTag: string) => {
+    const newTags = tags.filter((tag) => tag !== removedTag)
+    setTags(newTags)
+  }
+
+  const showInput = () => {
+    setInputVisible(true)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value)
+  }
+
+  const handleInputConfirm = () => {
+    if (inputValue && !tags.includes(inputValue)) {
+      setTags([...tags, inputValue])
+    }
+    setInputVisible(false)
+    setInputValue('')
   }
 
   // 当选择学科变化时，过滤对应的分类选项
@@ -127,6 +158,43 @@ const GoalForm: React.FC<GoalFormProps> = ({
         rules={[{ required: true, message: '请输入目标名称' }]}
       >
         <Input placeholder="请输入学习目标名称" />
+      </Form.Item>
+
+      {/* 标签输入区域 */}
+      <Form.Item label="标签">
+        <Space
+          size={[0, 8]}
+          wrap
+        >
+          {tags.map((tag) => (
+            <Tag
+              key={tag}
+              closable
+              onClose={() => handleClose(tag)}
+            >
+              {tag}
+            </Tag>
+          ))}
+          {inputVisible ? (
+            <Input
+              type="text"
+              size="small"
+              style={{ width: 78 }}
+              value={inputValue}
+              onChange={handleInputChange}
+              onBlur={handleInputConfirm}
+              onPressEnter={handleInputConfirm}
+              autoFocus
+            />
+          ) : (
+            <Tag
+              onClick={showInput}
+              style={{ borderStyle: 'dashed' }}
+            >
+              <PlusOutlined /> 添加标签
+            </Tag>
+          )}
+        </Space>
       </Form.Item>
 
       <Form.Item

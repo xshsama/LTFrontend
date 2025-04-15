@@ -1,11 +1,13 @@
 import axios, { AxiosError, AxiosRequestHeaders } from 'axios';
 import { removeCookie } from '../utils/cookies';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = 'http://localhost:8080';
 
 // 创建axios实例
 const apiClient = axios.create({
     baseURL: API_URL,
+    // 确保跨域请求时携带凭证
+    withCredentials: true,
 });
 
 // 在非组件代码中保存logout函数的引用

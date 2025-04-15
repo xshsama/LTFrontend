@@ -33,7 +33,7 @@ export interface Goal {
     updatedAt: string;
     subjectId: number;
     categoryId?: number;
-    // 标签会从关联的任务中获取，而不是直接存储
+    tags?: string[]; // 添加标签属性
 }
 
 export interface Task {

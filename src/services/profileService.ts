@@ -37,19 +37,8 @@ export const getUserProfile = async (): Promise<UserProfile> => {
         // 修改请求路径，尝试不同的API端点
         console.log('正在请求用户个人资料...');
 
-        // 首先尝试 /user/profile 路径
-        try {
-            const response = await apiClient.get(`/user/profile`);
-            console.log('API响应 (/user/profile):', response);
-            if (response.data && response.data.data) {
-                return response.data.data;
-            }
-        } catch (err) {
-            console.log('请求 /user/profile 失败，尝试备用路径');
-        }
 
-        // 如果第一个路径失败，尝试 /profile 路径
-        const response = await apiClient.get(`/profile`);
+        const response = await apiClient.get(`api/profile`);
         console.log('API响应 (/profile):', response);
 
         // 检查响应数据的结构

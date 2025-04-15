@@ -1,9 +1,10 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, Divider, Form, Input, message, Select } from 'antd'
+import { Button, Divider, Form, Input, message, Select, Space, Tag } from 'antd'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiService from '../../services/apiService'
 import { getCategories, getTags } from '../../services/subjectService'
+import { Subject as BaseSubject } from '../../types/goals'
 
 interface Category {
   id: number
@@ -15,11 +16,8 @@ interface Tag {
   name: string
 }
 
-// 定义学科接口
-interface Subject {
-  id?: number
-  title: string
-  description?: string
+// 扩展的学科接口，添加表单中需要的字段
+interface Subject extends BaseSubject {
   tags?: string[]
   categoryId?: number
 }
@@ -45,6 +43,14 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
   const [fetching, setFetching] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [creatingCategory, setCreatingCategory] = useState(false)
+
+  // 自定义标签相关状态
+  const [customTags, setCustomTags] = useState<string[]>(
+    initialData?.tags || [],
+  )
+  const [inputVisible, setInputVisible] = useState(false)
+  const [inputValue, setInputValue] = useState('')
+
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -71,7 +77,12 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
     if (initialData) {
       form.setFieldsValue({
         title: initialData.title,
+        description: initialData.description,
+        categoryId: initialData.categoryId,
       })
+      if (initialData.tags) {
+        setCustomTags(initialData.tags)
+      }
     }
   }, [initialData, form])
 
@@ -83,10 +94,43 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
 
     try {
       setCreatingCategory(true)
+
+      // 如果categories数组不为空，说明已有学科，使用第一个学科的ID
+      // 如果没有学科，则使用ID为1的默认学科
+      let subjectId = 1
+
+      // 查询是否有可用的学科
+      try {
+        const subjectsRes = await apiService.get('/api/subjects')
+        if (subjectsRes.data && subjectsRes.data.length > 0) {
+          subjectId = subjectsRes.data[0].id
+        }
+      } catch (error) {
+        console.error('获取学科列表失败:', error)
+      }
+
       const res = await apiService.post('/api/categories', {
         name: newCategoryName,
+        description: `分类: ${newCategoryName}`,
+        subject: {
+          id: subjectId,
+        },
       })
-      setCategories([...categories, res.data])
+
+      // 正确处理响应数据
+      if (res.data && res.data.data) {
+        // 假设返回的数据是一个Category对象
+        const newCategory: Category = res.data.data
+        setCategories([...categories, newCategory])
+      } else if (res.data) {
+        // 直接使用响应数据作为Category
+        const newCategory: Category = {
+          id: res.data.id || Date.now(), // 如果没有id，使用时间戳
+          name: res.data.name || newCategoryName,
+        }
+        setCategories([...categories, newCategory])
+      }
+
       setNewCategoryName('')
       message.success('分类创建成功')
     } catch (error) {
@@ -97,22 +141,53 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
     }
   }
 
+  // 标签相关方法
+  const handleClose = (removedTag: string) => {
+    const newTags = customTags.filter((tag) => tag !== removedTag)
+    setCustomTags(newTags)
+  }
+
+  const showInput = () => {
+    setInputVisible(true)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value)
+  }
+
+  const handleInputConfirm = () => {
+    if (inputValue && !customTags.includes(inputValue)) {
+      setCustomTags([...customTags, inputValue])
+    }
+    setInputVisible(false)
+    setInputValue('')
+  }
+
   const handleSubmit = async (values: any) => {
+    console.log('表单提交数据:', values) // 添加调试日志
     try {
       setLoading(true)
-      const data: Subject = {
-        id: initialData?.id,
+      console.log('准备调用onSubmit回调') // 添加调试日志
+
+      // 构建提交数据
+      const submissionData: Partial<Subject> = {
+        // 如果id存在则使用，否则不包含id字段（让后端自动生成）
+        ...(initialData?.id ? { id: initialData.id } : {}),
         title: values.title,
         description: values.description,
-        tags: values.tags,
         categoryId: values.categoryId,
+        tags: customTags,
+        // 添加 createdAt 和 updatedAt 以满足 BaseSubject 类型要求
+        createdAt: initialData?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
 
-      await onSubmit(data)
+      await onSubmit(submissionData as Subject)
       message.success(`${isEditing ? '更新' : '创建'}学科成功!`)
 
       if (!isEditing) {
         form.resetFields()
+        setCustomTags([]) // 重置标签
       } else {
         navigate('/subjects')
       }
@@ -128,7 +203,10 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
     <Form
       form={form}
       layout="vertical"
-      onFinish={handleSubmit}
+      onFinish={(values) => {
+        console.log('表单onFinish触发，值:', values)
+        handleSubmit(values)
+      }}
       initialValues={{ title: '' }}
     >
       <Form.Item
@@ -149,15 +227,41 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         />
       </Form.Item>
 
-      <Form.Item
-        name="tags"
-        label="标签"
-      >
-        <Select
-          mode="tags"
-          placeholder="请选择或输入标签"
-          tokenSeparators={[',']}
-        />
+      {/* 自定义标签输入区域 */}
+      <Form.Item label="标签">
+        <Space
+          size={[0, 8]}
+          wrap
+        >
+          {customTags.map((tag) => (
+            <Tag
+              key={tag}
+              closable
+              onClose={() => handleClose(tag)}
+            >
+              {tag}
+            </Tag>
+          ))}
+          {inputVisible ? (
+            <Input
+              type="text"
+              size="small"
+              style={{ width: 78 }}
+              value={inputValue}
+              onChange={handleInputChange}
+              onBlur={handleInputConfirm}
+              onPressEnter={handleInputConfirm}
+              autoFocus
+            />
+          ) : (
+            <Tag
+              onClick={showInput}
+              style={{ borderStyle: 'dashed' }}
+            >
+              <PlusOutlined /> 添加标签
+            </Tag>
+          )}
+        </Space>
       </Form.Item>
 
       <Form.Item

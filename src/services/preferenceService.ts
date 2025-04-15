@@ -21,7 +21,7 @@ export interface UserPreference {
 // 获取当前用户的偏好设置
 export const getUserPreferences = async (): Promise<UserPreference> => {
     try {
-        const response = await apiClient.get('/user/preferences');
+        const response = await apiClient.get('/api/user/preferences');
 
         if (response.data?.code === 200) {
             if (response.data?.data) {
@@ -57,7 +57,7 @@ export const updateUserPreferences = async (preferences: Partial<UserPreference>
         }, {} as Partial<UserPreference>);
 
 
-        const response = await apiClient.put('/user/preferences', filteredPreferences);
+        const response = await apiClient.put('/api/user/preferences', filteredPreferences);
 
         if (response.data?.code === 200 && response.data?.data) {
             return response.data.data;
