@@ -44,7 +44,7 @@ const refreshTokenRequest = async (): Promise<string> => {
         baseURL: API_URL,
     });
 
-    const response = await refreshClient.post('/auth/refresh-token', {}, {
+    const response = await refreshClient.post('/api/auth/refresh-token', {}, {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -102,9 +102,29 @@ const extractTokenFromRefreshResponse = (error: AxiosError): string | null => {
     }
 };
 
-// 请求拦截器 - 添加Authorization头
+// 请求拦截器 - 添加Authorization头（登录和注册请求除外）
 apiClient.interceptors.request.use(
     (config) => {
+        // 获取当前请求的URL路径
+        const url = config.url || '';
+        console.log(`处理请求: ${url}`);
+
+        // 对登录、注册和刷新令牌请求不添加令牌 - 使用更精确的路径匹配
+        // 确保路径匹配前端发出的实际请求路径
+        // 注意: 后端控制器路径是 /api/auth/xxx
+        if (url === '/api/auth/login' ||
+            url === '/api/auth/register' ||
+            url === '/api/auth/refresh-token' ||
+            url.startsWith('/api/auth/') ||
+            // 兼容没有/api前缀的路径
+            url === '/auth/login' ||
+            url === '/auth/register' ||
+            url === '/auth/refresh-token' ||
+            url.startsWith('/auth/')) {
+            console.log(`认证相关请求: ${url}，跳过添加令牌`);
+            return config;
+        }
+
         const token = localStorage.getItem('authToken');
         if (token) {
             if (!config.headers) {
@@ -113,6 +133,9 @@ apiClient.interceptors.request.use(
                 } as AxiosRequestHeaders;
             }
             config.headers['Authorization'] = `Bearer ${token}`; // 确保使用 Bearer 格式
+            console.log(`为请求 ${url} 添加令牌`);
+        } else {
+            console.log(`没有找到令牌，请求 ${url} 未添加Authorization头`);
         }
         return config;
     },
@@ -202,11 +225,9 @@ apiClient.interceptors.response.use(
 
                 // 重定向到登录页面
                 window.location.href = '/login';
-
                 return Promise.reject(refreshError);
             }
         }
-
         return Promise.reject(error);
     }
 );

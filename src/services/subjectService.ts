@@ -1,6 +1,6 @@
 import apiService from './apiService';
 
-const API_URL = '/subjects';
+const API_URL = 'api/subjects';
 
 // 获取当前用户的所有学科
 export const getUserSubjects = async () => {

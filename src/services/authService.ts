@@ -41,7 +41,7 @@ export interface RefreshTokenResponse {
 // 登录函数
 export const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
-        const response = await apiClient.post(`/auth/login`, credentials);
+        const response = await apiClient.post(`api/auth/login`, credentials);
 
         // 假设API返回格式为 { code: number, message: string, data: { token: string, userInfo: {...} } }
         if (response.data.code === 200 && response.data.data?.token) {
@@ -74,7 +74,7 @@ export const refreshToken = async (): Promise<string> => {
         }
 
         // 创建一个不带拦截器的axios实例，避免循环调用
-        const response = await apiClient.post('/auth/refresh-token', {}, {
+        const response = await apiClient.post('api/auth/refresh-token', {}, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -101,7 +101,8 @@ export const refreshToken = async (): Promise<string> => {
 // 注册函数
 export const register = async (data: RegisterRequest): Promise<any> => {
     try {
-        const response = await apiClient.post(`/auth/register`, data);
+        // 修改为正确的后端API路径，添加/api前缀
+        const response = await apiClient.post(`/api/auth/register`, data);
         return response.data;
     } catch (error: any) {
         if (error.response) {
@@ -114,7 +115,7 @@ export const register = async (data: RegisterRequest): Promise<any> => {
 // 获取当前用户信息
 export const getCurrentUser = async (): Promise<any> => {
     try {
-        const response = await apiClient.get(`/user/profile`);
+        const response = await apiClient.get(`api/user/profile`);
         return response.data.data;
     } catch (error: any) {
         if (error.response) {

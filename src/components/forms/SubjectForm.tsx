@@ -6,6 +6,8 @@ import apiService from '../../services/apiService'
 import { getCategories, getTags } from '../../services/subjectService'
 import { Subject as BaseSubject } from '../../types/goals'
 
+// 移除冗余导出声明，文件末尾已有默认导出
+
 interface Category {
   id: number
   name: string
@@ -165,9 +167,16 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
 
   const handleSubmit = async (values: any) => {
     console.log('表单提交数据:', values) // 添加调试日志
+    console.log('表单分类ID:', values.categoryId) // 特别记录分类ID
     try {
       setLoading(true)
       console.log('准备调用onSubmit回调') // 添加调试日志
+
+      // 确保categoryId是数字类型
+      const categoryId = values.categoryId
+        ? Number(values.categoryId)
+        : undefined
+      console.log('处理后的分类ID:', categoryId)
 
       // 构建提交数据
       const submissionData: Partial<Subject> = {
@@ -175,12 +184,15 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         ...(initialData?.id ? { id: initialData.id } : {}),
         title: values.title,
         description: values.description,
-        categoryId: values.categoryId,
+        categoryId: categoryId, // 使用转换后的类型
         tags: customTags,
         // 添加 createdAt 和 updatedAt 以满足 BaseSubject 类型要求
         createdAt: initialData?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
+
+      // 记录最终提交的数据
+      console.log('最终提交数据:', submissionData)
 
       await onSubmit(submissionData as Subject)
       message.success(`${isEditing ? '更新' : '创建'}学科成功!`)

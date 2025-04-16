@@ -7,7 +7,6 @@ import {
 } from '@ant-design/icons'
 import {
   Button,
-  message,
   Modal,
   Result,
   Space,
@@ -15,12 +14,18 @@ import {
   Tag,
   Tooltip,
   Typography,
+  message,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SubjectForm from '../components/forms/SubjectForm'
 import { useAuth } from '../contexts/AuthContext'
+import {
+  createSubject,
+  getUserSubjects,
+  updateSubject,
+} from '../services/subjectService'
 
 const { Title } = Typography
 
@@ -35,10 +40,14 @@ export interface Course {
   tags?: string[]
 }
 
-export const courseData: Course[] = [] // Provide an empty array
+// 初始化为空数组，将通过API调用获取数据
+export const courseData: Course[] = []
 
-// Define table columns
-const courseColumns: ColumnsType<Course> = [
+// 定义表格列
+const createCourseColumns = (
+  handleEdit: (record: Course) => void,
+  handleDelete: (record: Course) => void,
+): ColumnsType<Course> => [
   {
     title: '课程/科目名称',
     dataIndex: 'name',
@@ -97,6 +106,7 @@ const courseColumns: ColumnsType<Course> = [
           <Button
             shape="circle"
             icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
           />
         </Tooltip>
         <Tooltip title="删除">
@@ -104,6 +114,7 @@ const courseColumns: ColumnsType<Course> = [
             shape="circle"
             icon={<DeleteOutlined />}
             danger
+            onClick={() => handleDelete(record)}
           />
         </Tooltip>
       </Space>
@@ -112,22 +123,75 @@ const courseColumns: ColumnsType<Course> = [
 ]
 
 const Courses: React.FC = () => {
+  const [messageApi, contextHolder] = message.useMessage()
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [modalVisible, setModalVisible] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+  const [isEditing, setIsEditing] = useState<boolean>(false)
 
-  // 处理表单提交
+  // 获取课程/科目数据
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCourses()
+    }
+  }, [isAuthenticated])
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true)
+      const response = await getUserSubjects()
+      // 将后端返回的数据转换为前端需要的格式
+      const formattedCourses = response.data.map((subject: any) => ({
+        id: subject.id,
+        key: subject.id.toString(),
+        name: subject.title,
+        category: subject.categoryId ? subject.categoryId.toString() : '未分类',
+        relatedGoalsCount: subject.goalsCount || 0,
+        relatedTasksCount: subject.tasksCount || 0,
+        tags: subject.tags || [],
+      }))
+      setCourses(formattedCourses)
+    } catch (error) {
+      console.error('获取课程数据失败:', error)
+      messageApi.error('获取课程数据失败，请稍后再试!')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 处理表单提交（创建或更新课程）
   const handleSubmit = async (data: any) => {
     try {
       setLoading(true)
-      // TODO: 调用API添加课程
-      console.log('提交数据:', data)
-      message.success('课程添加成功!')
+      if (isEditing && editingCourse) {
+        // 更新现有课程
+        await updateSubject(editingCourse.id as unknown as number, {
+          title: data.title,
+          description: data.description,
+          tags: data.tags,
+          categoryId: data.categoryId,
+        })
+        messageApi.success('课程更新成功!')
+      } else {
+        // 创建新课程
+        await createSubject({
+          title: data.title,
+          description: data.description,
+          tags: data.tags,
+          categoryId: data.categoryId,
+        })
+        messageApi.success('课程添加成功!')
+      }
       setModalVisible(false)
+      setIsEditing(false)
+      setEditingCourse(null)
+      fetchCourses() // 重新获取课程列表
     } catch (error) {
-      console.error('添加课程失败:', error)
-      message.error('添加课程失败，请稍后再试!')
+      console.error(`${isEditing ? '更新' : '添加'}课程失败:`, error)
+      messageApi.error(`${isEditing ? '更新' : '添加'}课程失败，请稍后再试!`)
     } finally {
       setLoading(false)
     }
@@ -171,47 +235,79 @@ const Courses: React.FC = () => {
   }
 
   return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '24px',
-        }}
-      >
-        <Title
-          level={2}
-          style={{ marginBottom: 0 }}
+    <>
+      {contextHolder}
+      <div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '24px',
+          }}
         >
-          课程/科目
-        </Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleOpenModal}
-        >
-          添加课程/科目
-        </Button>
-      </div>
-      <Table
-        columns={courseColumns}
-        dataSource={courseData}
-      />
-
-      <Modal
-        title="添加课程/科目"
-        open={modalVisible}
-        onCancel={handleCloseModal}
-        footer={null}
-        destroyOnClose
-      >
-        <SubjectForm
-          onSubmit={handleSubmit}
-          onCancel={handleCloseModal}
+          <Title
+            level={2}
+            style={{ marginBottom: 0 }}
+          >
+            课程/科目
+          </Title>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleOpenModal}
+          >
+            添加课程/科目
+          </Button>
+        </div>
+        <Table
+          columns={createCourseColumns(
+            (record) => {
+              setEditingCourse(record)
+              setIsEditing(true)
+              setModalVisible(true)
+            },
+            (record) => {
+              // 这里可以添加删除课程的逻辑
+              // 例如显示确认对话框
+              Modal.confirm({
+                title: '确认删除',
+                content: `确定要删除课程"${record.name}"吗？`,
+                okText: '确定',
+                cancelText: '取消',
+                onOk: async () => {
+                  // TODO: 实现删除课程的API调用
+                  try {
+                    // 假设这里有一个删除API
+                    // await deleteSubject(record.id);
+                    messageApi.success('课程删除成功!')
+                    fetchCourses() // 刷新列表
+                  } catch (error) {
+                    console.error('删除课程失败:', error)
+                    messageApi.error('删除课程失败，请稍后再试!')
+                  }
+                },
+              })
+            },
+          )}
+          dataSource={courses}
+          loading={loading}
         />
-      </Modal>
-    </div>
+
+        <Modal
+          title="添加课程/科目"
+          open={modalVisible}
+          onCancel={handleCloseModal}
+          footer={null}
+          destroyOnClose
+        >
+          <SubjectForm
+            onSubmit={handleSubmit}
+            onCancel={handleCloseModal}
+          />
+        </Modal>
+      </div>
+    </>
   )
 }
 
