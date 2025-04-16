@@ -115,7 +115,7 @@ export const register = async (data: RegisterRequest): Promise<any> => {
 // 获取当前用户信息
 export const getCurrentUser = async (): Promise<any> => {
     try {
-        const response = await apiClient.get(`api/user/profile`);
+        const response = await apiClient.get(`/api/user/profile`);
         return response.data.data;
     } catch (error: any) {
         if (error.response) {

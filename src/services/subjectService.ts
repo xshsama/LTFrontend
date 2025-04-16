@@ -17,6 +17,11 @@ export const getCategories = async () => {
     return apiService.get('/api/categories');
 };
 
+// 获取特定学科的分类
+export const getCategoryBySubject = async (subjectId: number) => {
+    return apiService.get(`${API_URL}/category/${subjectId}`);
+};
+
 // 获取所有标签 
 export const getTags = async () => {
     return apiService.get('/api/tags');
