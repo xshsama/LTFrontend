@@ -71,7 +71,7 @@ export const uploadImageFile = async (
             formData.append('expiration', expiration.toString());
         }
 
-        const response = await apiClient.post('/avatar/upload/file', formData, {
+        const response = await apiClient.post('/api/avatar/upload/file', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -107,7 +107,7 @@ export const uploadImageBase64 = async (
             expiration
         };
 
-        const response = await apiClient.post('/avatar/upload/base64', data);
+        const response = await apiClient.post('/api/avatar/upload/base64', data);
 
         if (response.data.code === 200 && response.data.data) {
             return response.data.data.data; // 返回嵌套在data中的实际图片信息

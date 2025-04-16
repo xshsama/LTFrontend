@@ -65,17 +65,17 @@ export const updateUserProfile = async (profileData: UpdateProfileRequest): Prom
 
         // 首先尝试 /user/profile 路径
         try {
-            const response = await apiClient.put(`/user/profile`, profileData);
-            console.log('API响应 (/user/profile):', response);
+            const response = await apiClient.put(`api/user/profile`, profileData);
+            console.log('API响应 (api/user/profile):', response);
             if (response.data && response.data.data) {
                 return response.data.data;
             }
         } catch (err) {
-            console.log('请求 /user/profile 失败，尝试备用路径');
+            console.log('请求 api/user/profile 失败，尝试备用路径');
         }
 
         // 如果第一个路径失败，尝试 /profile 路径
-        const response = await apiClient.put(`/profile`, profileData);
+        const response = await apiClient.put(`api/profile`, profileData);
         console.log('API响应 (/profile):', response);
 
         if (response.data?.code === 200) {
@@ -94,7 +94,7 @@ export const updateUserProfile = async (profileData: UpdateProfileRequest): Prom
 // 更新用户密码
 export const updatePassword = async (passwordData: UpdatePasswordRequest): Promise<boolean> => {
     try {
-        const response = await apiClient.put(`/user/password`, passwordData);
+        const response = await apiClient.put(`api/user/password`, passwordData);
         return response.data.code === 200;
     } catch (error) {
         console.error('密码更新失败:', error);
@@ -109,7 +109,7 @@ export const uploadAvatar = async (file: File): Promise<string> => {
 
     try {
         // 调用后端的头像上传API
-        const response = await apiClient.post('avatar/upload/file', formData, {
+        const response = await apiClient.post('/api/avatar/upload/file', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
