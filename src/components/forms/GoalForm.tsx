@@ -1,16 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons'
-import {
-  Button,
-  DatePicker,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Space,
-  Tag,
-  theme,
-} from 'antd'
-import dayjs from 'dayjs'
+import { Button, Form, Input, Select, Space, Tag, theme } from 'antd'
 import React, { useState } from 'react'
 import { Category, Goal } from '../../types/goals'
 
@@ -44,13 +33,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
   const handleFormFinish = (values: any) => {
     const formattedValues = {
       ...values,
-      deadline: values.deadline
-        ? values.deadline.format('YYYY-MM-DD')
-        : undefined,
       completionDate: values.completionDate
         ? values.completionDate.format('YYYY-MM-DD')
         : undefined,
-      status: values.status || 'NO_STARTED',
+      status: values.status || 'NOT_STARTED',
       priority: values.priority || 'MEDIUM',
       progress: values.progress || 0,
       actualHours: values.actualHours || 0,
@@ -94,13 +80,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
       onFinish={handleFormFinish}
       initialValues={{
         ...initialValues,
-        deadline: initialValues?.deadline
-          ? dayjs(initialValues.deadline)
-          : undefined,
         progress: initialValues?.progress || 0,
         actualHours: initialValues?.actualHours || 0,
         priority: initialValues?.priority || 'MEDIUM',
-        status: initialValues?.status || 'NO_STARTED',
+        status: initialValues?.status || 'NOT_STARTED',
       }}
     >
       <Form.Item
@@ -122,33 +105,6 @@ const GoalForm: React.FC<GoalFormProps> = ({
               {subject.title}
             </Select.Option>
           ))}
-        </Select>
-      </Form.Item>
-
-      <Form.Item
-        label="所属分类"
-        name="categoryId"
-      >
-        <Select
-          placeholder="选择所属分类（可选）"
-          allowClear
-          optionFilterProp="children"
-          showSearch
-        >
-          {categories
-            .filter((cat) =>
-              form.getFieldValue('subjectId')
-                ? cat.subjectId === form.getFieldValue('subjectId')
-                : true,
-            )
-            .map((category) => (
-              <Select.Option
-                key={category.id}
-                value={category.id}
-              >
-                {category.name}
-              </Select.Option>
-            ))}
         </Select>
       </Form.Item>
 
@@ -198,17 +154,6 @@ const GoalForm: React.FC<GoalFormProps> = ({
       </Form.Item>
 
       <Form.Item
-        label="截止日期"
-        name="deadline"
-      >
-        <DatePicker
-          style={{ width: '100%' }}
-          placeholder="选择截止日期（可选）"
-          format="YYYY-MM-DD"
-        />
-      </Form.Item>
-
-      <Form.Item
         label="优先级"
         name="priority"
         rules={[{ required: true, message: '请选择优先级' }]}
@@ -217,6 +162,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
           <Select.Option value="HIGH">高</Select.Option>
           <Select.Option value="MEDIUM">中</Select.Option>
           <Select.Option value="LOW">低</Select.Option>
+          <Select.Option value="URGENT">紧急</Select.Option>
         </Select>
       </Form.Item>
 
@@ -226,81 +172,11 @@ const GoalForm: React.FC<GoalFormProps> = ({
         rules={[{ required: true, message: '请选择状态' }]}
       >
         <Select placeholder="选择状态">
-          <Select.Option value="NO_STARTED">未开始</Select.Option>
+          <Select.Option value="NOT_STARTED">未开始</Select.Option>
           <Select.Option value="ONGOING">进行中</Select.Option>
           <Select.Option value="COMPLETED">已完成</Select.Option>
           <Select.Option value="EXPIRED">已过期</Select.Option>
         </Select>
-      </Form.Item>
-
-      <Form.Item
-        label="完成进度(%)"
-        name="progress"
-        rules={[
-          {
-            required: true,
-            message: '请输入完成进度',
-            type: 'number',
-            min: 0,
-            max: 100,
-          },
-        ]}
-      >
-        <InputNumber
-          min={0}
-          max={100}
-          style={{ width: '100%' }}
-          placeholder="完成进度 (0-100)"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="预计学时(小时)"
-        name="expectedHours"
-        rules={[
-          {
-            type: 'number',
-            min: 0,
-          },
-        ]}
-      >
-        <InputNumber
-          min={0}
-          step={0.5}
-          style={{ width: '100%' }}
-          placeholder="预计需要的学习时间(小时)"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="已投入学时(小时)"
-        name="actualHours"
-        rules={[
-          {
-            required: true,
-            message: '请输入已投入学时',
-            type: 'number',
-            min: 0,
-          },
-        ]}
-      >
-        <InputNumber
-          min={0}
-          step={0.5}
-          style={{ width: '100%' }}
-          placeholder="已投入的学习时间(小时)"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="完成日期"
-        name="completionDate"
-      >
-        <DatePicker
-          style={{ width: '100%' }}
-          placeholder="目标完成日期（自动填写或手动设置）"
-          format="YYYY-MM-DD"
-        />
       </Form.Item>
 
       <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>

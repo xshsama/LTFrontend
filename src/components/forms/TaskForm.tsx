@@ -1,14 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons'
-import {
-  Button,
-  DatePicker,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Space,
-  Tag,
-} from 'antd'
+import { Button, Form, Input, InputNumber, Select, Space, Tag } from 'antd'
 import type { InputRef } from 'antd/es/input'
 import dayjs from 'dayjs'
 import React, { useState } from 'react'
@@ -78,12 +69,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const handleFormFinish = (values: any) => {
     const formattedValues = {
       ...values,
-      dueDate: values.dueDate ? values.dueDate.format('YYYY-MM-DD') : undefined,
       completionDate: values.completionDate
         ? values.completionDate.format('YYYY-MM-DD')
         : undefined,
       status: values.status || 'NOT_STARTED',
-      priority: values.priority || 'MEDIUM',
+      weight: values.weight || 5,
       actualTimeMinutes: values.actualTimeMinutes || 0,
       estimatedTimeMinutes: values.estimatedTimeMinutes,
       tags: selectedTagIds.map(
@@ -100,14 +90,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
       onFinish={handleFormFinish}
       initialValues={{
         ...initialValues,
-        dueDate: initialValues?.dueDate
-          ? dayjs(initialValues.dueDate)
-          : undefined,
         completionDate: initialValues?.completionDate
           ? dayjs(initialValues.completionDate)
           : undefined,
         status: initialValues?.status || 'NOT_STARTED',
-        priority: initialValues?.priority || 'MEDIUM',
+        weight: initialValues?.weight || 5,
         actualTimeMinutes: initialValues?.actualTimeMinutes || 0,
         tagIds: initialValues?.tags?.map((tag) => tag.id) || [],
       }}
@@ -152,27 +139,24 @@ const TaskForm: React.FC<TaskFormProps> = ({
       </Form.Item>
 
       <Form.Item
-        label="截止日期"
-        name="dueDate"
+        label="权重"
+        name="weight"
+        rules={[
+          { required: true, message: '请输入权重' },
+          {
+            type: 'number',
+            min: 1,
+            max: 10,
+            message: '权重必须是1-10之间的数字',
+          },
+        ]}
       >
-        <DatePicker
+        <InputNumber
+          min={1}
+          max={10}
           style={{ width: '100%' }}
-          placeholder="选择截止日期（可选）"
-          format="YYYY-MM-DD"
+          placeholder="请输入1-10之间的权重值"
         />
-      </Form.Item>
-
-      <Form.Item
-        label="优先级"
-        name="priority"
-        rules={[{ required: true, message: '请选择优先级' }]}
-      >
-        <Select placeholder="选择优先级">
-          <Select.Option value="HIGH">高</Select.Option>
-          <Select.Option value="MEDIUM">中</Select.Option>
-          <Select.Option value="LOW">低</Select.Option>
-          <Select.Option value="URGENT">紧急</Select.Option>
-        </Select>
       </Form.Item>
 
       <Form.Item
@@ -187,53 +171,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
           <Select.Option value="OVERDUE">已过期</Select.Option>
           <Select.Option value="CANCELLED">已取消</Select.Option>
         </Select>
-      </Form.Item>
-
-      <Form.Item
-        label="预计时间(分钟)"
-        name="estimatedTimeMinutes"
-        rules={[
-          {
-            type: 'number',
-            min: 0,
-          },
-        ]}
-      >
-        <InputNumber
-          min={0}
-          style={{ width: '100%' }}
-          placeholder="预计完成任务所需时间(分钟)"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="已用时间(分钟)"
-        name="actualTimeMinutes"
-        rules={[
-          {
-            required: true,
-            message: '请输入已用时间',
-            type: 'number',
-            min: 0,
-          },
-        ]}
-      >
-        <InputNumber
-          min={0}
-          style={{ width: '100%' }}
-          placeholder="已花费的时间(分钟)"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="完成日期"
-        name="completionDate"
-      >
-        <DatePicker
-          style={{ width: '100%' }}
-          placeholder="任务完成日期（可选）"
-          format="YYYY-MM-DD"
-        />
       </Form.Item>
 
       <Form.Item

@@ -2,7 +2,13 @@ import { Progress, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React from 'react'
 import '../../styles/tables.css'
-import { Goal, GoalStatus, Priority, Tag as TagType } from '../../types/goals'
+import {
+  Goal,
+  GoalStatus,
+  Priority,
+  Tag as TagType,
+  Task,
+} from '../../types/goals'
 
 const { Link } = Typography
 
@@ -10,6 +16,7 @@ interface GoalsTableProps {
   data: Goal[]
   loading?: boolean
   taskTags?: Record<number, TagType[]> // 关联的任务标签映射
+  tasks?: Task[] // 所有任务数据，用于计算关联任务的时间总和
   onRowClick?: (goal: Goal) => void
 }
 
@@ -17,6 +24,7 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
   data,
   loading = false,
   taskTags = {},
+  tasks = [],
   onRowClick,
 }) => {
   // 添加行点击处理
@@ -31,20 +39,6 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       dataIndex: 'title',
       key: 'title',
       render: (text: string) => <Link>{text}</Link>,
-    },
-    {
-      title: '截止日期',
-      dataIndex: 'deadline',
-      key: 'deadline',
-      sorter: (a, b) =>
-        a.deadline && b.deadline
-          ? new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-          : a.deadline
-          ? 1
-          : b.deadline
-          ? -1
-          : 0,
-      render: (deadline?: string) => deadline || '未设置',
     },
     {
       title: '进度',
@@ -123,12 +117,36 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       title: '学时',
       dataIndex: 'expectedHours',
       key: 'expectedHours',
-      render: (expectedHours: number | undefined, record: Goal) => (
-        <Tooltip title={`已投入: ${record.actualHours || 0}小时`}>
-          {expectedHours ? `${expectedHours}小时` : '未估计'}
-          {record.actualHours ? ` / ${record.actualHours}小时` : ''}
-        </Tooltip>
-      ),
+      render: (
+        expectedHours: number | undefined,
+        record: Goal,
+        index: number,
+      ) => {
+        // 获取与该目标关联的任务
+        const associatedTasks = tasks.filter(
+          (task) => task.goalId === record.id,
+        )
+
+        // 计算关联任务的总时间（分钟）
+        const totalTaskMinutes = associatedTasks.reduce(
+          (sum, task) => sum + (task.actualTimeMinutes || 0),
+          0,
+        )
+
+        // 转换为小时和分钟
+        const taskHours = Math.floor(totalTaskMinutes / 60)
+        const taskMinutes = totalTaskMinutes % 60
+
+        // 格式化显示文本
+        const timeText =
+          taskHours > 0
+            ? `${taskHours}小时${taskMinutes > 0 ? `${taskMinutes}分钟` : ''}`
+            : taskMinutes > 0
+            ? `${taskMinutes}分钟`
+            : '0分钟'
+
+        return <Tooltip title={`任务总时间: ${timeText}`}>{timeText}</Tooltip>
+      },
     },
     {
       title: '标签',

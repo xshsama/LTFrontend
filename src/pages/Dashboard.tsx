@@ -95,14 +95,6 @@ const GoalTasks: React.FC<{ goal: Goal }> = ({ goal }) => {
                 {task.title}
               </Text>
             }
-            description={
-              <Text
-                type="secondary"
-                className="task-deadline"
-              >
-                截止: {task.dueDate}
-              </Text>
-            }
           />
           <Tag
             color={

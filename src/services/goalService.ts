@@ -27,7 +27,6 @@ export const getGoalsBySubject = async (subjectId: number): Promise<Goal[]> => {
 export const createGoal = async (goalData: {
     subjectId: number;
     title: string;
-    deadline?: string;
     priority?: string;
     expectedHours?: number;
     categoryId?: number;

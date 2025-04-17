@@ -46,7 +46,6 @@ interface Achievement {
   id: string
   title: string
   date: string
-  points: number
 }
 
 interface UserStats {
@@ -81,11 +80,11 @@ const ProfilePage: React.FC = () => {
 
   // 模拟成就数据
   const achievements: Achievement[] = [
-    { id: '1', title: '学习先锋', date: '2023-12-15', points: 100 },
-    { id: '2', title: '持之以恒', date: '2023-11-30', points: 150 },
-    { id: '3', title: '知识探索者', date: '2024-01-10', points: 200 },
-    { id: '4', title: '目标达成者', date: '2024-02-05', points: 100 },
-    { id: '5', title: '连续学习7天', date: '2024-03-20', points: 50 },
+    { id: '1', title: '学习先锋', date: '2023-12-15' },
+    { id: '2', title: '持之以恒', date: '2023-11-30' },
+    { id: '3', title: '知识探索者', date: '2024-01-10' },
+    { id: '4', title: '目标达成者', date: '2024-02-05' },
+    { id: '5', title: '连续学习7天', date: '2024-03-20' },
   ]
 
   // 在组件加载时获取用户个人资料
@@ -282,9 +281,6 @@ const ProfilePage: React.FC = () => {
                   <div className="achievement-content">
                     <Title level={5}>{achievement.title}</Title>
                     <Text type="secondary">获得时间: {achievement.date}</Text>
-                    <div className="achievement-points">
-                      <StarOutlined /> {achievement.points} 分
-                    </div>
                   </div>
                 </Card>
               </Col>

@@ -2,7 +2,7 @@ import { Space, Table, Tag, Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React from 'react'
 import '../../styles/tables.css'
-import { Priority, Task, TaskStatus } from '../../types/goals'
+import { Task, TaskStatus, Weight } from '../../types/goals'
 
 const { Link } = Typography
 
@@ -32,47 +32,24 @@ const TasksTable: React.FC<TasksTableProps> = ({
       render: (text: string) => <Link>{text}</Link>,
     },
     {
-      title: '截止日期',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      sorter: (a, b) =>
-        a.dueDate && b.dueDate
-          ? new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-          : a.dueDate
-          ? 1
-          : b.dueDate
-          ? -1
-          : 0,
-      render: (dueDate?: string) => dueDate || '未设置',
-    },
-    {
-      title: '优先级',
-      dataIndex: 'priority',
-      key: 'priority',
-      filters: [
-        { text: '高', value: 'HIGH' },
-        { text: '中', value: 'MEDIUM' },
-        { text: '低', value: 'LOW' },
-        { text: '紧急', value: 'URGENT' },
-      ],
-      onFilter: (value: any, record: Task) => record.priority === value,
-      render: (priority: Priority) => {
-        const priorityMap = {
-          HIGH: '高',
-          MEDIUM: '中',
-          LOW: '低',
-          URGENT: '紧急',
+      title: '权重',
+      dataIndex: 'weight',
+      key: 'weight',
+      sorter: (a: Task, b: Task) => a.weight - b.weight,
+      render: (weight: Weight) => {
+        let weightClass = 'medium'
+        let weightText = weight.toString()
+
+        if (weight >= 8) {
+          weightClass = 'high'
+        } else if (weight >= 5) {
+          weightClass = 'medium'
+        } else {
+          weightClass = 'low'
         }
-        const className = `priority-tag ${
-          priority === 'HIGH'
-            ? 'high'
-            : priority === 'MEDIUM'
-            ? 'medium'
-            : priority === 'URGENT'
-            ? 'urgent'
-            : 'low'
-        }`
-        return <Tag className={className}>{priorityMap[priority]}</Tag>
+
+        const className = `priority-tag ${weightClass}`
+        return <Tag className={className}>{weightText}</Tag>
       },
     },
     {
@@ -111,22 +88,22 @@ const TasksTable: React.FC<TasksTableProps> = ({
       },
     },
     {
-      title: '预估时间',
-      dataIndex: 'estimatedTimeMinutes',
-      key: 'estimatedTimeMinutes',
-      render: (time: number | undefined, record: Task) => {
-        if (!time) return '未估计'
-        const hours = Math.floor(time / 60)
-        const minutes = time % 60
-        const actualTime = record.actualTimeMinutes || 0
-        const actualHours = Math.floor(actualTime / 60)
-        const actualMinutes = actualTime % 60
+      title: '已投入时间',
+      dataIndex: 'actualTimeMinutes',
+      key: 'actualTimeMinutes',
+      render: (time: number) => {
+        const actualHours = Math.floor(time / 60)
+        const actualMinutes = time % 60
 
         return (
-          <Tooltip title={`已投入: ${actualHours}小时${actualMinutes}分钟`}>
-            {hours > 0 ? `${hours}小时` : ''}
-            {minutes > 0 ? `${minutes}分钟` : hours > 0 ? '' : '0分钟'}
-          </Tooltip>
+          <span>
+            {actualHours > 0 ? `${actualHours}小时` : ''}
+            {actualMinutes > 0
+              ? `${actualMinutes}分钟`
+              : actualHours > 0
+              ? ''
+              : '0分钟'}
+          </span>
         )
       },
     },

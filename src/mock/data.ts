@@ -32,7 +32,6 @@ export const mockGoalData: Goal[] = [
     {
         id: 1,
         title: '完成 React Hooks 学习',
-        deadline: '2025-04-30',
         priority: 'HIGH',
         status: 'ONGOING',
         progress: 45,
@@ -40,12 +39,12 @@ export const mockGoalData: Goal[] = [
         actualHours: 9,
         createdAt: '2025-04-01T08:00:00Z',
         updatedAt: '2025-04-10T15:30:00Z',
-        subjectId: 1
+        subjectId: 1,
+        tags: ['React', 'Hooks']
     },
     {
         id: 2,
         title: '掌握 Spring Security',
-        deadline: '2025-05-31',
         priority: 'MEDIUM',
         status: 'ONGOING',
         progress: 30,
@@ -53,7 +52,8 @@ export const mockGoalData: Goal[] = [
         actualHours: 4,
         createdAt: '2025-04-02T09:00:00Z',
         updatedAt: '2025-04-10T16:45:00Z',
-        subjectId: 2
+        subjectId: 2,
+        tags: ['Java', 'Security']
     }
 ];
 
@@ -62,11 +62,9 @@ export const mockTaskData: Task[] = [
         id: 1,
         title: '学习 useEffect 钩子',
         description: '深入理解 useEffect 的使用场景和注意事项',
-        dueDate: '2025-04-15',
-        priority: 'HIGH',
+        weight: 8,
         status: 'IN_PROGRESS',
         completionDate: undefined,
-        estimatedTimeMinutes: 120,
         actualTimeMinutes: 45,
         goalId: 1,
         createdAt: '2025-04-01T08:30:00Z',
@@ -90,11 +88,9 @@ export const mockTaskData: Task[] = [
         id: 2,
         title: '实现用户认证',
         description: '使用 Spring Security 实现基本的用户认证功能',
-        dueDate: '2025-05-15',
-        priority: 'HIGH',
+        weight: 9,
         status: 'NOT_STARTED',
         completionDate: undefined,
-        estimatedTimeMinutes: 180,
         actualTimeMinutes: 0,
         goalId: 2,
         createdAt: '2025-04-02T09:30:00Z',
@@ -124,7 +120,6 @@ export const mockAchievementData: Achievement[] = [
         type: '目标',
         relatedItemId: 1,
         relatedItemTitle: 'React 路由管理',
-        points: 100,
         description: '掌握了 React Router 的核心概念和实践应用',
         createdAt: '2025-03-30T10:00:00Z',
         updatedAt: '2025-03-30T10:00:00Z'
@@ -136,7 +131,6 @@ export const mockAchievementData: Achievement[] = [
         type: '任务',
         relatedItemId: 2,
         relatedItemTitle: '配置 Spring Data JPA',
-        points: 50,
         description: '成功配置并测试了数据库连接',
         createdAt: '2025-03-25T14:30:00Z',
         updatedAt: '2025-03-25T14:30:00Z'

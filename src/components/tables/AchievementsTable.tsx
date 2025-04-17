@@ -54,13 +54,7 @@ const AchievementsTable: React.FC<AchievementsTableProps> = ({
         </Tooltip>
       ),
     },
-    {
-      title: '获得积分',
-      dataIndex: 'points',
-      key: 'points',
-      sorter: (a, b) => a.points - b.points,
-      render: (points: number) => <Tag color="gold">{points} 分</Tag>,
-    },
+
     {
       title: '描述',
       dataIndex: 'description',

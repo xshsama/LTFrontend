@@ -28,8 +28,7 @@ export const createTask = async (taskData: {
     goalId: number;
     title: string;
     description?: string;
-    dueDate?: string;
-    priority?: string;
+    weight?: number;
     estimatedTimeMinutes?: number;
 }): Promise<Task> => {
     try {

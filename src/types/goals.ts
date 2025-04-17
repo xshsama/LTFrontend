@@ -1,3 +1,4 @@
+export type Weight = number;
 export type Priority = 'HIGH' | 'MEDIUM' | 'LOW' | 'URGENT';
 export type GoalStatus = 'ONGOING' | 'COMPLETED' | 'EXPIRED' | 'NO_STARTED';
 export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
@@ -22,7 +23,6 @@ export interface Category {
 export interface Goal {
     id: number;
     title: string;
-    deadline?: string;
     status: GoalStatus;
     completionDate?: string;
     priority: Priority;
@@ -40,11 +40,9 @@ export interface Task {
     id: number;
     title: string;
     description?: string;
-    dueDate?: string;
     status: TaskStatus;
     completionDate?: string;
-    priority: Priority;
-    estimatedTimeMinutes?: number;
+    weight: Weight;
     actualTimeMinutes: number;
     createdAt: string;
     updatedAt: string;
@@ -66,7 +64,6 @@ export interface Achievement {
     type: AchievementType;
     relatedItemId: number;
     relatedItemTitle: string;
-    points: number;
     description?: string;
     createdAt: string;
     updatedAt: string;
