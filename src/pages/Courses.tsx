@@ -23,6 +23,7 @@ import SubjectForm from '../components/forms/SubjectForm'
 import { useAuth } from '../contexts/AuthContext'
 import {
   createSubject,
+  getCategoryBySubject,
   getUserSubjects,
   updateSubject,
 } from '../services/subjectService'
@@ -35,6 +36,8 @@ export interface Course {
   key: string
   name: string
   category: string
+  categoryId?: number // 添加categoryId字段
+  description?: string // 添加description字段
   relatedGoalsCount: number
   relatedTasksCount: number
   tags?: string[]
@@ -143,17 +146,43 @@ const Courses: React.FC = () => {
     try {
       setLoading(true)
       const response = await getUserSubjects()
-      // 将后端返回的数据转换为前端需要的格式
-      const formattedCourses = response.data.map((subject: any) => ({
-        id: subject.id,
-        key: subject.id.toString(),
-        name: subject.title,
-        category: subject.categoryId ? subject.categoryId.toString() : '未分类',
-        relatedGoalsCount: subject.goalsCount || 0,
-        relatedTasksCount: subject.tasksCount || 0,
-        tags: subject.tags || [],
-      }))
-      setCourses(formattedCourses)
+
+      // 创建一个暂存对象，通过Promise.all处理所有异步请求
+      const subjectsWithCategories = await Promise.all(
+        response.data.map(async (subject: any) => {
+          let categoryName = '未分类'
+          let categoryId = null
+
+          // 如果有科目ID，则通过API获取对应的分类信息
+          if (subject.id) {
+            try {
+              // 通过getCategoryBySubject API获取分类信息
+              const categoryResponse = await getCategoryBySubject(subject.id)
+              if (categoryResponse.data && categoryResponse.data.name) {
+                categoryName = categoryResponse.data.name
+                categoryId = categoryResponse.data.id
+              }
+            } catch (error) {
+              console.error(`获取科目${subject.id}的分类信息失败:`, error)
+            }
+          }
+
+          // 返回包含分类名称和ID的科目信息
+          return {
+            id: subject.id,
+            key: subject.id.toString(),
+            name: subject.title,
+            categoryId: categoryId, // 保存分类ID用于编辑
+            category: categoryName, // 显示实际的分类名称
+            relatedGoalsCount: subject.totalGoals || 0,
+            relatedTasksCount: subject.totalTasks || 0,
+            tags: subject.tags || [],
+            description: subject.description,
+          }
+        }),
+      )
+
+      setCourses(subjectsWithCategories)
     } catch (error) {
       console.error('获取课程数据失败:', error)
       messageApi.error('获取课程数据失败，请稍后再试!')
@@ -295,15 +324,31 @@ const Courses: React.FC = () => {
         />
 
         <Modal
-          title="添加课程/科目"
+          title={isEditing ? '编辑课程/科目' : '添加课程/科目'}
           open={modalVisible}
           onCancel={handleCloseModal}
           footer={null}
           destroyOnClose
         >
           <SubjectForm
+            initialData={
+              editingCourse
+                ? {
+                    id: Number(editingCourse.id),
+                    title: editingCourse.name,
+                    description: editingCourse.description,
+                    categoryId: editingCourse.categoryId
+                      ? Number(editingCourse.categoryId)
+                      : undefined,
+                    // Subject 接口需要这些字段
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  }
+                : undefined
+            }
             onSubmit={handleSubmit}
             onCancel={handleCloseModal}
+            isEditing={isEditing}
           />
         </Modal>
       </div>
