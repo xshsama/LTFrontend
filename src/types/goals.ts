@@ -7,8 +7,6 @@ export type AchievementType = '目标' | '任务';
 export interface Subject {
     id: number;
     title: string;
-    description?: string;
-    imageUrl?: string;
     createdAt: string;
     updatedAt: string;
 }

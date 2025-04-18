@@ -30,7 +30,6 @@ export const getTags = async () => {
 // 创建新学科
 export const createSubject = async (subjectData: {
     title: string;
-    description?: string;
     tags?: string[];
     categoryId?: number;
 }) => {
@@ -40,7 +39,6 @@ export const createSubject = async (subjectData: {
 // 更新学科
 export const updateSubject = async (id: number, subjectData: {
     title: string;
-    description?: string;
     tags?: string[];
     categoryId?: number;
 }) => {

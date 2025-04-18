@@ -64,7 +64,6 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
     if (initialData) {
       form.setFieldsValue({
         title: initialData.title,
-        description: initialData.description,
       })
 
       // 如果是编辑模式且有学科ID，则通过API获取该学科的分类信息
@@ -166,7 +165,6 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         // 如果id存在则使用，否则不包含id字段（让后端自动生成）
         ...(initialData?.id ? { id: initialData.id } : {}),
         title: values.title,
-        description: values.description,
         categoryId: categoryId, // 使用转换后的类型
         // 添加 createdAt 和 updatedAt 以满足 BaseSubject 类型要求
         createdAt: initialData?.createdAt || new Date().toISOString(),
@@ -208,16 +206,6 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         rules={[{ required: true, message: '请输入学科名称!' }]}
       >
         <Input placeholder="请输入学科名称" />
-      </Form.Item>
-
-      <Form.Item
-        name="description"
-        label="描述"
-      >
-        <Input.TextArea
-          placeholder="请输入学科描述"
-          rows={4}
-        />
       </Form.Item>
 
       <Form.Item

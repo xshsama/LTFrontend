@@ -177,7 +177,6 @@ const Courses: React.FC = () => {
             relatedGoalsCount: subject.totalGoals || 0,
             relatedTasksCount: subject.totalTasks || 0,
             tags: subject.tags || [],
-            description: subject.description,
           }
         }),
       )
@@ -199,7 +198,6 @@ const Courses: React.FC = () => {
         // 更新现有课程
         await updateSubject(editingCourse.id as unknown as number, {
           title: data.title,
-          description: data.description,
           tags: data.tags,
           categoryId: data.categoryId,
         })
@@ -208,7 +206,6 @@ const Courses: React.FC = () => {
         // 创建新课程
         await createSubject({
           title: data.title,
-          description: data.description,
           tags: data.tags,
           categoryId: data.categoryId,
         })
@@ -336,7 +333,6 @@ const Courses: React.FC = () => {
                 ? {
                     id: Number(editingCourse.id),
                     title: editingCourse.name,
-                    description: editingCourse.description,
                     categoryId: editingCourse.categoryId
                       ? Number(editingCourse.categoryId)
                       : undefined,
