@@ -25,8 +25,6 @@ export interface Goal {
     completionDate?: string;
     priority: Priority;
     progress: number;
-    expectedHours?: number;
-    actualHours: number;
     createdAt: string;
     updatedAt: string;
     subjectId: number;
@@ -37,7 +35,6 @@ export interface Goal {
 export interface Task {
     id: number;
     title: string;
-    description?: string;
     status: TaskStatus;
     completionDate?: string;
     weight: Weight;
@@ -48,11 +45,22 @@ export interface Task {
     tags: Tag[]; // 只有Task直接关联标签
 }
 
+export interface User {
+    id: number;
+    username: string;
+    email?: string;
+    isActive?: boolean;
+    role?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export interface Tag {
     id: number;
     name: string;
     color?: string;
     userId: number;
+    user?: User;  // 添加可选的user属性
 }
 
 export interface Achievement {

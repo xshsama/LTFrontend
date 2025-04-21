@@ -66,33 +66,33 @@ const extractTokenFromRefreshResponse = (error: AxiosError): string | null => {
         const responseData = error.response?.data as any;
         console.log('收到401响应，检查是否包含刷新令牌:', responseData);
 
-        if (responseData && responseData.error === 'TokenExpired') {
-            console.log('识别到TokenExpired错误，尝试提取新令牌');
+        if (responseData && (responseData.error === 'TokenExpired' || responseData.refreshedToken)) {
+            console.log('识别到TokenExpired错误或直接包含refreshedToken，尝试提取新令牌');
 
             // 尝试多种可能的结构获取令牌
             let token = null;
 
-            // 方式1: 直接从refreshedToken对象获取
-            if (responseData.refreshedToken && responseData.refreshedToken.token) {
-                token = responseData.refreshedToken.token;
-                console.log('方式1成功：从refreshedToken.token中提取到令牌');
-            }
-            // 方式2: 从data字段获取
-            else if (responseData.refreshedToken && responseData.refreshedToken.data) {
-                token = responseData.refreshedToken.data;
-                console.log('方式2成功：从refreshedToken.data中提取到令牌');
-            }
-            // 方式3: refreshedToken本身就是令牌字符串
-            else if (typeof responseData.refreshedToken === 'string') {
+            // 方式1: 直接从refreshedToken字段获取
+            if (typeof responseData.refreshedToken === 'string') {
                 token = responseData.refreshedToken;
-                console.log('方式3成功：refreshedToken本身就是令牌字符串');
+                console.log('方式1成功：refreshedToken是字符串格式');
+            }
+            // 方式2: 从嵌套对象中获取
+            else if (responseData.refreshedToken?.token) {
+                token = responseData.refreshedToken.token;
+                console.log('方式2成功：从refreshedToken.token中提取');
+            }
+            // 方式3: 从data字段获取
+            else if (responseData.data?.token) {
+                token = responseData.data.token;
+                console.log('方式3成功：从data.token中提取');
             }
 
             if (token) {
-                console.log('成功从后端自动刷新响应中提取到令牌');
+                console.log('成功提取到新令牌，长度:', token.length);
                 return token;
             } else {
-                console.warn('响应中存在TokenExpired错误，但无法提取到令牌:', responseData);
+                console.warn('无法从响应中提取令牌，响应结构:', responseData);
             }
         }
         return null;
@@ -156,36 +156,43 @@ apiClient.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry &&
             !originalRequest.url?.includes('/auth/refresh-token')) {
 
-            console.log('检测到401未授权错误，尝试刷新令牌');
-            console.log('响应内容:', error.response?.data);
+            console.log('检测到401未授权错误，尝试处理');
+            console.log('完整错误响应:', error.response);
 
             // 首先检查响应中是否包含自动刷新的令牌
             const autoRefreshedToken = extractTokenFromRefreshResponse(error);
 
             if (autoRefreshedToken) {
-                // 如果找到自动刷新的令牌，直接使用它
                 console.log('成功获取自动刷新的令牌，长度:', autoRefreshedToken.length);
+                console.log('令牌前20位:', autoRefreshedToken.substring(0, 20));
 
                 // 保存新令牌
                 localStorage.setItem('authToken', autoRefreshedToken);
+                console.log('新令牌已保存到localStorage');
 
                 // 更新当前请求的Authorization头
+                originalRequest.headers = originalRequest.headers || {};
                 originalRequest.headers['Authorization'] = `Bearer ${autoRefreshedToken}`;
+                console.log('更新请求头完成');
 
                 // 如果其他请求正在等待令牌刷新，通知它们
                 if (isRefreshing) {
+                    console.log('通知等待中的请求使用新令牌');
                     onRefreshed(autoRefreshedToken);
                     isRefreshing = false;
                 }
 
                 // 重试原始请求
+                console.log('准备重试原始请求');
                 return apiClient(originalRequest);
             }
 
             // 如果已经在刷新，就加入等待队列
             if (isRefreshing) {
+                console.log('已有刷新请求在进行中，加入等待队列');
                 return new Promise(resolve => {
                     addSubscriber((token: string) => {
+                        originalRequest.headers = originalRequest.headers || {};
                         originalRequest.headers['Authorization'] = `Bearer ${token}`;
                         resolve(apiClient(originalRequest));
                     });
@@ -194,20 +201,25 @@ apiClient.interceptors.response.use(
 
             originalRequest._retry = true;
             isRefreshing = true;
+            console.log('开始主动刷新令牌流程');
 
             try {
                 // 尝试刷新令牌
                 const newToken = await refreshTokenRequest();
+                console.log('刷新令牌成功，新令牌长度:', newToken.length);
 
                 // 更新当前请求的Authorization头
+                originalRequest.headers = originalRequest.headers || {};
                 originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
 
                 // 执行等待中的请求
+                console.log('通知等待中的请求使用新令牌');
                 onRefreshed(newToken);
 
                 isRefreshing = false;
 
                 // 重试原始请求
+                console.log('准备重试原始请求');
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 console.error('令牌刷新失败:', refreshError);
@@ -217,13 +229,16 @@ apiClient.interceptors.response.use(
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('user');
                 removeCookie('userInfo');
+                console.log('已清除认证信息');
 
                 // 如果已设置logoutHandler，则调用它
                 if (logoutHandler) {
+                    console.log('调用logoutHandler');
                     logoutHandler();
                 }
 
                 // 重定向到登录页面
+                console.log('重定向到登录页面');
                 window.location.href = '/login';
                 return Promise.reject(refreshError);
             }

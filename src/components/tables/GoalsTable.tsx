@@ -114,14 +114,9 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       },
     },
     {
-      title: '学时',
-      dataIndex: 'expectedHours',
-      key: 'expectedHours',
-      render: (
-        expectedHours: number | undefined,
-        record: Goal,
-        index: number,
-      ) => {
+      title: '任务总时间',
+      key: 'totalTime',
+      render: (_: any, record: Goal) => {
         // 获取与该目标关联的任务
         const associatedTasks = tasks.filter(
           (task) => task.goalId === record.id,

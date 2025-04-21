@@ -21,12 +21,13 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SubjectForm from '../components/forms/SubjectForm'
 import { useAuth } from '../contexts/AuthContext'
+import apiService from '../services/apiService'
 import {
   createSubject,
   getCategoryBySubject,
-  getUserSubjects,
   updateSubject,
 } from '../services/subjectService'
+const API_URL = 'http://localhost:8080/api/subjects'
 
 const { Title } = Typography
 
@@ -145,7 +146,7 @@ const Courses: React.FC = () => {
   const fetchCourses = async () => {
     try {
       setLoading(true)
-      const response = await getUserSubjects()
+      const response = await apiService.get(API_URL) // 直接调用公开API
 
       // 创建一个暂存对象，通过Promise.all处理所有异步请求
       const subjectsWithCategories = await Promise.all(

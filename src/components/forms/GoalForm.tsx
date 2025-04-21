@@ -39,8 +39,6 @@ const GoalForm: React.FC<GoalFormProps> = ({
       status: values.status || 'NOT_STARTED',
       priority: values.priority || 'MEDIUM',
       progress: values.progress || 0,
-      actualHours: values.actualHours || 0,
-      expectedHours: values.expectedHours,
       tags: tags, // 将标签数组添加到表单提交数据中
     }
     onFinish(formattedValues)
@@ -81,7 +79,6 @@ const GoalForm: React.FC<GoalFormProps> = ({
       initialValues={{
         ...initialValues,
         progress: initialValues?.progress || 0,
-        actualHours: initialValues?.actualHours || 0,
         priority: initialValues?.priority || 'MEDIUM',
         status: initialValues?.status || 'NOT_STARTED',
       }}

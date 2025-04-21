@@ -35,8 +35,6 @@ export const mockGoalData: Goal[] = [
         priority: 'HIGH',
         status: 'ONGOING',
         progress: 45,
-        expectedHours: 20,
-        actualHours: 9,
         createdAt: '2025-04-01T08:00:00Z',
         updatedAt: '2025-04-10T15:30:00Z',
         subjectId: 1,
@@ -48,8 +46,6 @@ export const mockGoalData: Goal[] = [
         priority: 'MEDIUM',
         status: 'ONGOING',
         progress: 30,
-        expectedHours: 15,
-        actualHours: 4,
         createdAt: '2025-04-02T09:00:00Z',
         updatedAt: '2025-04-10T16:45:00Z',
         subjectId: 2,
@@ -61,7 +57,6 @@ export const mockTaskData: Task[] = [
     {
         id: 1,
         title: '学习 useEffect 钩子',
-        description: '深入理解 useEffect 的使用场景和注意事项',
         weight: 8,
         status: 'IN_PROGRESS',
         completionDate: undefined,
@@ -87,7 +82,6 @@ export const mockTaskData: Task[] = [
     {
         id: 2,
         title: '实现用户认证',
-        description: '使用 Spring Security 实现基本的用户认证功能',
         weight: 9,
         status: 'NOT_STARTED',
         completionDate: undefined,
