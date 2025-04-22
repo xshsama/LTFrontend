@@ -1,6 +1,6 @@
 import { Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import '../../styles/tables.css'
 import { Goal, Task, TaskStatus, Weight } from '../../types/goals'
 import TaskTags from '../TaskTags'
@@ -12,6 +12,7 @@ interface TasksTableProps {
   goals: Goal[]
   loading?: boolean
   onRowClick?: (task: Task) => void
+  refreshKey?: number // 添加刷新键属性
 }
 
 const TasksTable: React.FC<TasksTableProps> = ({
@@ -19,7 +20,15 @@ const TasksTable: React.FC<TasksTableProps> = ({
   goals,
   loading = false,
   onRowClick,
+  refreshKey = 0,
 }) => {
+  // 添加一个状态来跟踪标签刷新
+  const [tagRefreshTrigger, setTagRefreshTrigger] = useState(0)
+
+  // 当外部refreshKey变化时更新内部标签刷新触发器
+  useEffect(() => {
+    setTagRefreshTrigger((prev) => prev + 1)
+  }, [refreshKey])
   // 添加行点击处理
   const handleRowClick = (record: Task) => {
     if (onRowClick) {
@@ -127,6 +136,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
           <TaskTags
             taskId={record.id}
             maxDisplay={3}
+            refreshTrigger={tagRefreshTrigger} // 传递刷新触发器
           />
         </div>
       ),

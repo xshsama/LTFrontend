@@ -14,12 +14,14 @@ interface TaskTagsProps {
   taskId: number
   showTitle?: boolean
   maxDisplay?: number
+  refreshTrigger?: number // 新增一个刷新触发器属性
 }
 
 const TaskTags: React.FC<TaskTagsProps> = ({
   taskId,
   showTitle = false,
   maxDisplay = 10,
+  refreshTrigger = 0, // 默认值为0
 }) => {
   const [tags, setTags] = useState<TagItem[]>([])
   const [loading, setLoading] = useState<boolean>(true)
@@ -45,7 +47,7 @@ const TaskTags: React.FC<TaskTagsProps> = ({
     }
 
     fetchTags()
-  }, [taskId])
+  }, [taskId, refreshTrigger]) // 添加refreshTrigger作为依赖
 
   if (loading) return <Spin size="small" />
 
