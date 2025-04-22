@@ -8,14 +8,17 @@ import AchievementsTable from '../components/tables/AchievementsTable'
 import GoalsTable from '../components/tables/GoalsTable'
 import TasksTable from '../components/tables/TasksTable'
 import { useAuth } from '../contexts/AuthContext'
-import { mockAchievementData, mockGoalData, mockTaskData } from '../mock/data'
 import { createGoal, getGoals } from '../services/goalService'
 import {
   getCategories,
   getSubjects,
   getTags,
 } from '../services/objectiveService'
-import { createTask, getTasksByGoal } from '../services/taskService'
+import {
+  createTask,
+  getAllTasks,
+  getTasksByGoal,
+} from '../services/taskService'
 import {
   Achievement,
   Category,
@@ -31,10 +34,9 @@ const ObjectivesPage: React.FC = () => {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  const [goals, setGoals] = useState<Goal[]>(mockGoalData)
-  const [tasks, setTasks] = useState<Task[]>(mockTaskData)
-  const [achievements, setAchievements] =
-    useState<Achievement[]>(mockAchievementData)
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [achievements, setAchievements] = useState<Achievement[]>([])
 
   // 添加学科和分类的状态管理
   const [subjects, setSubjects] = useState<Subject[]>([])
@@ -93,11 +95,31 @@ const ObjectivesPage: React.FC = () => {
     }
   }, [isAuthenticated])
 
+  // 获取所有任务
+  useEffect(() => {
+    const fetchAllTasks = async () => {
+      setLoading(true)
+      try {
+        const tasksData = await getAllTasks()
+        setTasks(tasksData)
+      } catch (error) {
+        console.error('获取所有任务失败:', error)
+        message.error('获取任务数据失败，请重试！')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchAllTasks()
+    }
+  }, [isAuthenticated])
+
   // 获取选定目标的任务列表
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null)
 
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchTasksByGoal = async () => {
       if (!selectedGoalId) return
 
       setLoading(true)
@@ -113,7 +135,7 @@ const ObjectivesPage: React.FC = () => {
     }
 
     if (isAuthenticated && selectedGoalId) {
-      fetchTasks()
+      fetchTasksByGoal()
     }
   }, [isAuthenticated, selectedGoalId])
 

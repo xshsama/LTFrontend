@@ -1,6 +1,17 @@
 import { Task } from '../types/goals';
 import apiClient from './apiService';
 
+// 获取所有任务
+export const getAllTasks = async (): Promise<Task[]> => {
+    try {
+        const response = await apiClient.get('/api/tasks');
+        return response.data;
+    } catch (error) {
+        console.error('获取所有任务失败:', error);
+        throw error;
+    }
+};
+
 // 根据目标ID获取任务列表
 export const getTasksByGoal = async (goalId: number): Promise<Task[]> => {
     try {

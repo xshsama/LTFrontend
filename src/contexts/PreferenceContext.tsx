@@ -34,7 +34,15 @@ export const PreferenceProvider: React.FC<PreferenceProviderProps> = ({
 
   // 初始化时加载用户偏好设置
   useEffect(() => {
-    const loadPreferences = async () => {
+    const loadPreferences = async (retryCount = 0) => {
+      const token = localStorage.getItem('authToken')
+      console.log('加载偏好设置 - 当前令牌:', token)
+
+      if (!token) {
+        console.warn('未找到认证令牌，跳过偏好设置加载')
+        return
+      }
+
       try {
         const userPreferences = await getUserPreferences()
         setPreferences((prevPreferences) => ({
@@ -43,6 +51,11 @@ export const PreferenceProvider: React.FC<PreferenceProviderProps> = ({
         }))
       } catch (error) {
         console.error('加载用户偏好设置失败:', error)
+        // 如果失败但令牌存在，重试最多3次
+        if (retryCount < 3 && localStorage.getItem('authToken')) {
+          console.log(`重试加载偏好设置 (${retryCount + 1}/3)`)
+          setTimeout(() => loadPreferences(retryCount + 1), 1000)
+        }
       }
     }
 

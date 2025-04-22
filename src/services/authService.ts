@@ -50,6 +50,10 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
             // 将用户信息存储到cookie中，有效期7天
             setObjectInCookie('userInfo', loginResponse.userInfo, 7);
 
+            // 将认证令牌保存到localStorage
+            localStorage.setItem('authToken', loginResponse.token);
+            console.log('令牌已保存到localStorage:', loginResponse.token.substring(0, 15) + '...');
+
             // 返回完整的登录响应
             return loginResponse;
         } else {
