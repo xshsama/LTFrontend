@@ -6,6 +6,7 @@ import {
   Goal,
   GoalStatus,
   Priority,
+  Subject,
   Tag as TagType,
   Task,
 } from '../../types/goals'
@@ -17,6 +18,7 @@ interface GoalsTableProps {
   loading?: boolean
   taskTags?: Record<number, TagType[]> // 关联的任务标签映射
   tasks?: Task[] // 所有任务数据，用于计算关联任务的时间总和
+  subjects?: Subject[] // 所有学科数据
   onRowClick?: (goal: Goal) => void
 }
 
@@ -25,6 +27,7 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
   loading = false,
   taskTags = {},
   tasks = [],
+  subjects = [],
   onRowClick,
 }) => {
   // 添加行点击处理
@@ -39,6 +42,14 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       dataIndex: 'title',
       key: 'title',
       render: (text: string) => <Link>{text}</Link>,
+    },
+    {
+      title: '关联学科',
+      key: 'subject',
+      render: (_: any, record: Goal) => {
+        const subject = subjects?.find((s) => s.id === record.subjectId)
+        return subject ? subject.title : '-'
+      },
     },
     {
       title: '进度',

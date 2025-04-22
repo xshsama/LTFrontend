@@ -1,19 +1,22 @@
-import { Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React from 'react'
 import '../../styles/tables.css'
-import { Task, TaskStatus, Weight } from '../../types/goals'
+import { Goal, Task, TaskStatus, Weight } from '../../types/goals'
+import TaskTags from '../TaskTags'
 
 const { Link } = Typography
 
 interface TasksTableProps {
   data: Task[]
+  goals: Goal[]
   loading?: boolean
   onRowClick?: (task: Task) => void
 }
 
 const TasksTable: React.FC<TasksTableProps> = ({
   data,
+  goals,
   loading = false,
   onRowClick,
 }) => {
@@ -30,6 +33,14 @@ const TasksTable: React.FC<TasksTableProps> = ({
       dataIndex: 'title',
       key: 'title',
       render: (text: string) => <Link>{text}</Link>,
+    },
+    {
+      title: '关联目标',
+      key: 'goal',
+      render: (_: any, record: Task) => {
+        const goal = goals.find((g: Goal) => g.id === record.goalId)
+        return goal ? <Link>{goal.title}</Link> : '-'
+      },
     },
     {
       title: '权重',
@@ -113,30 +124,10 @@ const TasksTable: React.FC<TasksTableProps> = ({
       dataIndex: 'tags',
       render: (_, record: Task) => (
         <div className="tag-list">
-          {record.tags && record.tags.length > 0 ? (
-            <>
-              {record.tags.slice(0, 3).map((tag) => (
-                <Tag
-                  color={tag.color || 'blue'}
-                  key={tag.id}
-                >
-                  {tag.name}
-                </Tag>
-              ))}
-              {record.tags.length > 3 && (
-                <Tooltip
-                  title={record.tags
-                    .slice(3)
-                    .map((tag) => tag.name)
-                    .join(', ')}
-                >
-                  <Tag>+{record.tags.length - 3}</Tag>
-                </Tooltip>
-              )}
-            </>
-          ) : (
-            <span className="no-tags">无标签</span>
-          )}
+          <TaskTags
+            taskId={record.id}
+            maxDisplay={3}
+          />
         </div>
       ),
     },

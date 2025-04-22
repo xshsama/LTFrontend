@@ -185,7 +185,7 @@ const ObjectivesPage: React.FC = () => {
   // 处理任务表单提交
   const handleTaskFormSubmit = async (
     values: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
-  ) => {
+  ): Promise<Task> => {
     setFormSubmitting(true)
     try {
       // 调用API创建新任务
@@ -197,9 +197,13 @@ const ObjectivesPage: React.FC = () => {
       // 关闭模态框
       setTaskModalVisible(false)
       message.success('任务添加成功！')
+
+      // 返回创建的任务，以便在TaskForm中使用
+      return newTask
     } catch (error: any) {
       console.error('添加任务失败:', error)
       message.error(error.message || '添加任务失败，请重试！')
+      throw error // 抛出错误，让调用方知道操作失败
     } finally {
       setFormSubmitting(false)
     }
@@ -258,6 +262,7 @@ const ObjectivesPage: React.FC = () => {
       children: (
         <TasksTable
           data={tasks}
+          goals={goals}
           loading={loading}
           onRowClick={(task) => {
             console.log('Clicked task:', task)

@@ -13,13 +13,16 @@ import type { InputRef } from 'antd/es/input'
 import dayjs from 'dayjs'
 import React, { useEffect, useState } from 'react'
 import { createTag, getTags } from '../../services/objectiveService'
+import { setTaskTags } from '../../services/taskTagService'
 import { Goal, Tag as TagType, Task } from '../../types/goals'
 
 interface TaskFormProps {
   initialValues?: Partial<Task>
   goals: Goal[] // 可用的目标列表，用于关联
   availableTags: TagType[] // 可用的标签列表
-  onFinish: (values: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onFinish: (
+    values: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
+  ) => Promise<Task> | void
   onCancel?: () => void
   loading?: boolean
 }
@@ -144,7 +147,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
     })
   }
 
-  const handleFormFinish = (values: any) => {
+  // 处理表单提交
+  const handleFormFinish = async (values: any) => {
     const formattedValues = {
       ...values,
       completionDate: values.completionDate
@@ -160,7 +164,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
         return allTags.find((tag) => tag.id === id)!
       }),
     }
-    onFinish(formattedValues)
+
+    try {
+      // 先保存任务本身并获取任务ID
+      const savedTask = await onFinish(formattedValues)
+
+      // 如果是编辑现有任务或成功创建了新任务，处理标签关系
+      if (savedTask && savedTask.id && selectedTagIds.length > 0) {
+        // 使用taskTagService设置任务的标签
+        await setTaskTags(savedTask.id, selectedTagIds)
+        console.log('任务标签更新成功')
+      }
+    } catch (error) {
+      console.error('保存任务或标签关系失败:', error)
+      message.error('保存任务或标签关系时发生错误')
+    }
   }
 
   return (

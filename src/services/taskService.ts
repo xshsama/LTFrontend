@@ -93,3 +93,72 @@ export const updateTaskStatus = async (id: number, status: string): Promise<Task
         throw error;
     }
 };
+
+// ===== 任务标签相关方法 =====
+
+// 为任务添加单个标签
+export const addTagToTask = async (taskId: number, tagId: number): Promise<void> => {
+    try {
+        await apiClient.post('/api/task-tags/add-tag', {
+            taskId,
+            tagId
+        });
+    } catch (error) {
+        console.error('添加标签到任务失败:', error);
+        throw error;
+    }
+};
+
+// 为任务添加多个标签
+export const addTagsToTask = async (taskId: number, tagIds: number[]): Promise<void> => {
+    try {
+        await apiClient.post('/api/task-tags/add-tags', {
+            taskId,
+            tagIds
+        });
+    } catch (error) {
+        console.error('批量添加标签到任务失败:', error);
+        throw error;
+    }
+};
+
+// 从任务中移除标签
+export const removeTagFromTask = async (taskId: number, tagId: number): Promise<void> => {
+    try {
+        await apiClient.delete(`/api/task-tags/task/${taskId}/tag/${tagId}`);
+    } catch (error) {
+        console.error('从任务中移除标签失败:', error);
+        throw error;
+    }
+};
+
+// 获取任务的所有标签
+export const getTaskTags = async (taskId: number): Promise<any[]> => {
+    try {
+        const response = await apiClient.get(`/api/task-tags/task/${taskId}/tags`);
+        return response.data.data;
+    } catch (error) {
+        console.error('获取任务标签失败:', error);
+        throw error;
+    }
+};
+
+// 设置任务标签（替换所有现有标签）
+export const setTaskTags = async (taskId: number, tagIds: number[]): Promise<void> => {
+    try {
+        await apiClient.put(`/api/task-tags/task/${taskId}/set-tags`, tagIds);
+    } catch (error) {
+        console.error('设置任务标签失败:', error);
+        throw error;
+    }
+};
+
+// 清除任务的所有标签
+export const clearTaskTags = async (taskId: number): Promise<void> => {
+    try {
+        await apiClient.delete(`/api/task-tags/task/${taskId}/clear-tags`);
+    } catch (error) {
+        console.error('清除任务标签失败:', error);
+        throw error;
+    }
+};
