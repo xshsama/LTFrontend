@@ -47,7 +47,9 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       title: '关联学科',
       key: 'subject',
       render: (_: any, record: Goal) => {
-        const subject = subjects?.find((s) => s.id === record.subjectId)
+        // 确保subjects是数组
+        const subjectsArray = Array.isArray(subjects) ? subjects : []
+        const subject = subjectsArray.find((s) => s.id === record.subjectId)
         return subject ? subject.title : '-'
       },
     },

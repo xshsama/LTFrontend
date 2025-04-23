@@ -1,11 +1,16 @@
 import type { AxiosError } from 'axios';
+import axios from 'axios';
 import { Category, Goal, Subject, Tag, Task } from '../types/goals';
 import apiClient from './apiService';
+
+// API 基础 URL
+const API_BASE_URL = 'http://localhost:8080';
 
 // 获取学科列表
 export const getSubjects = async (): Promise<Subject[]> => {
     try {
-        const response = await apiClient.get('/api/subjects');
+        // 尝试直接使用 axios 而不是 apiClient，因为 /api/subjects 理论上不需要认证
+        const response = await axios.get(`${API_BASE_URL}/api/subjects`);
         return response.data;
     } catch (error) {
         console.error('获取学科列表失败:', error);

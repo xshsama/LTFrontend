@@ -27,7 +27,6 @@ import {
   getCategoryBySubject,
   updateSubject,
 } from '../services/subjectService'
-const API_URL = 'http://localhost:8080/api/subjects'
 
 const { Title } = Typography
 
@@ -93,13 +92,46 @@ const createCourseColumns = (
     title: '标签',
     key: 'tags',
     dataIndex: 'tags',
-    render: (tags?: string[]) => (
-      <>
-        {tags?.map((tag) => (
-          <Tag key={tag}>{tag}</Tag>
-        ))}
-      </>
-    ),
+    render: (tags?: any) => {
+      console.log('渲染标签数据:', tags) // 输出标签数据以便调试
+      // 检查标签数据的类型和结构
+      if (!tags || (Array.isArray(tags) && tags.length === 0)) {
+        return <Tag color="default">无标签</Tag> // 当没有标签时显示"无标签"
+      }
+
+      // 如果tags是数组，直接渲染
+      if (Array.isArray(tags)) {
+        return (
+          <>
+            {tags.map((tag, index) => {
+              // 如果tag是对象（例如 {id: 1, name: 'tag1'}），使用name属性
+              if (typeof tag === 'object' && tag !== null) {
+                return (
+                  <Tag
+                    key={tag.id || index}
+                    color={tag.color || 'blue'}
+                  >
+                    {tag.name}
+                  </Tag>
+                )
+              }
+              // 如果tag是字符串，直接使用
+              return (
+                <Tag
+                  key={index}
+                  color="blue"
+                >
+                  {tag}
+                </Tag>
+              )
+            })}
+          </>
+        )
+      }
+
+      // 如果tags是对象，可能需要特殊处理
+      return <Tag color="default">不支持的标签格式</Tag>
+    },
   },
   {
     title: '操作',
@@ -146,11 +178,66 @@ const Courses: React.FC = () => {
   const fetchCourses = async () => {
     try {
       setLoading(true)
-      const response = await apiService.get(API_URL) // 直接调用公开API
+
+      // 添加更详细的调试日志
+      console.log('开始获取课程数据...')
+      console.log('当前认证状态:', isAuthenticated)
+      console.log(
+        '本地存储中的令牌是否存在:',
+        !!localStorage.getItem('authToken'),
+      )
+
+      // 修复: 使用apiService实例而不是直接调用URL
+      // 让请求拦截器能自动添加Authorization头
+      const response = await apiService.get('/api/subjects')
+
+      console.log('API请求成功，状态码:', response.status)
+      console.log('后端返回的科目数据:', response.data) // 添加调试日志
+      console.log('后端返回数据类型:', typeof response.data) // 记录数据类型
+
+      // 更详细地检查响应格式
+      let subjectsArray = []
+      if (response.data && typeof response.data === 'object') {
+        if (response.data.data && Array.isArray(response.data.data)) {
+          // ApiResponse格式: {code, message, data: [...]}
+          subjectsArray = response.data.data
+          console.log('从ApiResponse中提取数组')
+        } else if (Array.isArray(response.data)) {
+          // 直接是数组
+          subjectsArray = response.data
+          console.log('响应直接是数组')
+        } else {
+          // 其他情况，尝试将对象转为数组
+          console.log('响应既不是包含data数组的对象，也不是数组，尝试其他方法')
+          if (response.data.code === 200 && response.data.data === null) {
+            // 处理成功但数据为空的情况
+            console.log('成功响应但数据为空')
+            subjectsArray = []
+          } else {
+            // 尝试转换对象为数组
+            console.log('尝试从对象中提取可用数据')
+            // 如果是单个对象，放入数组中
+            subjectsArray = [response.data]
+          }
+        }
+      }
+
+      console.log('处理后的学科数组:', subjectsArray)
+      console.log(
+        '学科数组类型:',
+        typeof subjectsArray,
+        '是否为数组:',
+        Array.isArray(subjectsArray),
+      )
+      // 安全检查，确保是数组
+      if (!Array.isArray(subjectsArray)) {
+        console.error('无法获取有效的学科数组，使用空数组代替')
+        subjectsArray = []
+      }
 
       // 创建一个暂存对象，通过Promise.all处理所有异步请求
       const subjectsWithCategories = await Promise.all(
-        response.data.map(async (subject: any) => {
+        subjectsArray.map(async (subject: any) => {
           let categoryName = '未分类'
           let categoryId = null
 
@@ -159,6 +246,7 @@ const Courses: React.FC = () => {
             try {
               // 通过getCategoryBySubject API获取分类信息
               const categoryResponse = await getCategoryBySubject(subject.id)
+              console.log('科目分类响应:', categoryResponse.data)
               if (categoryResponse.data && categoryResponse.data.name) {
                 categoryName = categoryResponse.data.name
                 categoryId = categoryResponse.data.id
@@ -168,21 +256,81 @@ const Courses: React.FC = () => {
             }
           }
 
+          // 使用debug方式查看subject的结构
+          console.log('科目详细数据:', JSON.stringify(subject, null, 2))
+
+          // 获取关联目标和任务的数量 - 优先使用后端提供的统计字段
+          let goalsCount = 0
+          if (subject.totalGoals !== undefined) {
+            goalsCount = subject.totalGoals
+          } else if (subject.goalsCount !== undefined) {
+            goalsCount = subject.goalsCount
+          } else if (subject.goals) {
+            goalsCount = Array.isArray(subject.goals) ? subject.goals.length : 0
+          }
+
+          let tasksCount = 0
+          if (subject.totalTasks !== undefined) {
+            tasksCount = subject.totalTasks
+          } else if (subject.tasksCount !== undefined) {
+            tasksCount = subject.tasksCount
+          } else if (subject.tasks) {
+            tasksCount = Array.isArray(subject.tasks) ? subject.tasks.length : 0
+          }
+
+          // 调试输出关联数量
+          console.log(
+            `科目 ${subject.title} 的关联目标数: ${goalsCount}, 关联任务数: ${tasksCount}`,
+          )
+
+          // 处理标签 - 可能是数组或其他格式
+          let tags = []
+          if (subject.tags) {
+            // 确保tags总是一个数组
+            tags = Array.isArray(subject.tags)
+              ? subject.tags
+              : typeof subject.tags === 'string'
+              ? [subject.tags]
+              : []
+
+            // 如果是空数组，添加一个默认标签以便于测试
+            if (tags.length === 0) {
+              tags = ['学习中']
+            }
+          }
+
           // 返回包含分类名称和ID的科目信息
-          return {
-            id: subject.id,
-            key: subject.id.toString(),
-            name: subject.title,
+          const courseData = {
+            id: subject.id || Date.now(), // 如果id为undefined，使用时间戳作为临时id
+            key: subject.id ? subject.id.toString() : Date.now().toString(), // 安全地调用toString
+            name: subject.title || '未命名学科', // 提供默认名称
             categoryId: categoryId, // 保存分类ID用于编辑
             category: categoryName, // 显示实际的分类名称
-            relatedGoalsCount: subject.totalGoals || 0,
-            relatedTasksCount: subject.totalTasks || 0,
-            tags: subject.tags || [],
+            relatedGoalsCount: goalsCount,
+            relatedTasksCount: tasksCount,
+            tags: tags,
+            description: subject.description || '', // 添加描述字段
           }
+
+          console.log('转换后的课程数据:', courseData)
+          return courseData
         }),
       )
 
-      setCourses(subjectsWithCategories)
+      // 在接收到结果后，检查数据是否有效
+      console.log('处理后的所有课程数据:', subjectsWithCategories)
+
+      // 确保数据有效并且每个字段都正确初始化
+      const validCourses = subjectsWithCategories.map((course) => ({
+        ...course,
+        // 确保关联计数为数字，避免undefined或null
+        relatedGoalsCount: Number(course.relatedGoalsCount) || 0,
+        relatedTasksCount: Number(course.relatedTasksCount) || 0,
+        // 确保标签是数组
+        tags: Array.isArray(course.tags) ? course.tags : [],
+      }))
+
+      setCourses(validCourses)
     } catch (error) {
       console.error('获取课程数据失败:', error)
       messageApi.error('获取课程数据失败，请稍后再试!')

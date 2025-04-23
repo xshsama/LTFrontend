@@ -250,6 +250,7 @@ const ObjectivesPage: React.FC = () => {
           loading={loading}
           taskTags={taskTagsByGoal}
           tasks={tasks}
+          subjects={subjects}
           onRowClick={(goal) => {
             setSelectedGoalId(goal.id)
           }}
