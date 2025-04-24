@@ -17,12 +17,12 @@ import {
   deleteSubject,
   getUserSubjects,
 } from '../services/subjectService'
+import { Subject as BaseSubject } from '../types/goals'
 
 const { Title } = Typography
 
-interface Subject {
-  id?: number
-  title: string
+// 本地扩展的 Subject 接口
+interface Subject extends BaseSubject {
   categoriesCount?: number
   goalsCount?: number
 }
@@ -133,7 +133,7 @@ const SubjectsPage: React.FC = () => {
           renderItem={(subject) => (
             <List.Item>
               <Card
-                title={subject.title}
+                title={subject.name}
                 hoverable
                 actions={[
                   <EditOutlined

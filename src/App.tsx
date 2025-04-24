@@ -1,4 +1,4 @@
-import { ConfigProvider, theme as antdTheme } from 'antd' // Import ConfigProvider and theme
+import { ConfigProvider, Progress, theme as antdTheme } from 'antd' // Import ConfigProvider and theme
 import {
   Navigate,
   Route,
@@ -18,9 +18,9 @@ import Dashboard from './pages/Dashboard'
 import LoginPage from './pages/LoginPage' // Import LoginPage
 import Objectives from './pages/Objectives'
 import ProfilePage from './pages/ProfilePage' // 导入个人资料页面
-import Progress from './pages/Progress'
 import RegisterPage from './pages/RegisterPage' // 导入注册页面
 import Settings from './pages/Settings'
+import TaskProgressPage from './pages/TaskProgressPage'
 
 // Inner component to access theme context and preferences for ConfigProvider
 const ThemedApp: React.FC = () => {
@@ -90,6 +90,10 @@ const ThemedApp: React.FC = () => {
                 <Route
                   path="settings"
                   element={<Settings />}
+                />
+                <Route
+                  path="task-progress"
+                  element={<TaskProgressPage />}
                 />
                 {/* Default redirect for authenticated area */}
                 <Route

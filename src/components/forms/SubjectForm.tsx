@@ -63,7 +63,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
-        title: initialData.title,
+        title: initialData.name, // 使用name而不是title
       })
 
       // 如果是编辑模式且有学科ID，则通过API获取该学科的分类信息
@@ -161,14 +161,12 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
       console.log('处理后的分类ID:', categoryId)
 
       // 构建提交数据
-      const submissionData: Partial<Subject> = {
-        // 如果id存在则使用，否则不包含id字段（让后端自动生成）
-        ...(initialData?.id ? { id: initialData.id } : {}),
-        title: values.title,
-        categoryId: categoryId, // 使用转换后的类型
-        // 添加 createdAt 和 updatedAt 以满足 BaseSubject 类型要求
-        createdAt: initialData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      const submissionData: Subject = {
+        ...(initialData || { id: Date.now() }), // 为新学科生成临时ID
+        name: values.title,
+        categoryId: categoryId,
+        createdAt: initialData?.createdAt || new Date(),
+        updatedAt: new Date(),
       }
 
       // 记录最终提交的数据

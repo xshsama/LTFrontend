@@ -25,8 +25,8 @@ import {
   Goal,
   Subject,
   Tag as TagType,
-  Task,
 } from '../types/goals'
+import { Task } from '../types/task'
 
 const { Title } = Typography
 
@@ -160,9 +160,17 @@ const ObjectivesPage: React.FC = () => {
   }
 
   // 处理目标表单提交
-  const handleGoalFormSubmit = async (
-    values: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>,
-  ) => {
+  const handleGoalFormSubmit = async (values: {
+    subjectId?: number
+    title: string
+    priority?: string
+    categoryId?: number
+    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+    description?: string
+    targetDate?: Date
+    progress?: number
+    tags?: string[] // 修改为string[]类型，与表单提交的格式匹配
+  }) => {
     setFormSubmitting(true)
     try {
       // 调用API创建新目标
@@ -234,10 +242,20 @@ const ObjectivesPage: React.FC = () => {
   // 模拟每个目标关联的任务标签
   const taskTagsByGoal: Record<number, TagType[]> = {}
   tasks.forEach((task) => {
-    if (!taskTagsByGoal[task.goalId]) {
-      taskTagsByGoal[task.goalId] = []
+    const goalId = task.goalId
+    if (!taskTagsByGoal[goalId]) {
+      taskTagsByGoal[goalId] = []
     }
-    taskTagsByGoal[task.goalId] = [...taskTagsByGoal[task.goalId], ...task.tags]
+    if (task.goal?.tags && task.goal.tags.length > 0) {
+      const validTags = task.goal.tags.filter(
+        (tag): tag is TagType =>
+          tag !== null &&
+          typeof tag === 'object' &&
+          'id' in tag &&
+          'name' in tag,
+      )
+      taskTagsByGoal[goalId] = [...taskTagsByGoal[goalId], ...validTags]
+    }
   })
 
   const tabItems = [
@@ -265,7 +283,7 @@ const ObjectivesPage: React.FC = () => {
           data={tasks}
           goals={goals}
           loading={loading}
-          onRowClick={(task) => {
+          onRowClick={(task: Task) => {
             console.log('Clicked task:', task)
             // 这里可以添加点击任务时的处理逻辑
           }}

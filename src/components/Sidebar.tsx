@@ -31,9 +31,9 @@ const menuItems = [
     label: <Link to="/courses">课程/科目</Link>,
   },
   {
-    key: '/progress',
+    key: '/task-progress',
     icon: <BarChartOutlined />,
-    label: <Link to="/progress">学习进度</Link>,
+    label: <Link to="/task-progress">任务进度</Link>,
   },
   {
     key: '/community',

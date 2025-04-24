@@ -1,4 +1,4 @@
-import { Task } from '../types/goals';
+import { Task } from '../types/task';
 import apiClient from './apiService';
 
 // 获取所有任务

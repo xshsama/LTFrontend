@@ -1,76 +1,72 @@
-export type Weight = number;
-export type Priority = 'HIGH' | 'MEDIUM' | 'LOW' | 'URGENT';
-export type GoalStatus = 'ONGOING' | 'COMPLETED' | 'EXPIRED' | 'NO_STARTED';
-export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
-export type AchievementType = '目标' | '任务';
-
-export interface Subject {
-    id: number;
-    title: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface Category {
-    id: number;
-    name: string;
-    description?: string;
-    subjectId: number;
-}
-
 export interface Goal {
-    id: number;
-    title: string;
-    status: GoalStatus;
-    completionDate?: string;
-    priority: Priority;
-    progress: number;
-    createdAt: string;
-    updatedAt: string;
-    subjectId: number;
-    categoryId?: number;
-    tags?: string[]; // 添加标签属性
+    id: number
+    title: string
+    description?: string
+    targetDate?: Date
+    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+    progress?: number
+    subjectId?: number
+    tags?: Tag[]
+    createdAt: Date
+    updatedAt: Date
 }
 
 export interface Task {
-    id: number;
-    title: string;
-    status: TaskStatus;
-    completionDate?: string;
-    weight: Weight;
-    actualTimeMinutes: number;
-    createdAt: string;
-    updatedAt: string;
-    goalId: number;
-    tags: Tag[]; // 只有Task直接关联标签
-}
-
-export interface User {
-    id: number;
-    username: string;
-    email?: string;
-    isActive?: boolean;
-    role?: string;
-    createdAt?: string;
-    updatedAt?: string;
-}
-
-export interface Tag {
-    id: number;
-    name: string;
-    color?: string;
-    userId: number;
-    user?: User;  // 添加可选的user属性
+    id: number
+    title: string
+    weight: number
+    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED'
+    type: 'STEP' | 'HABIT' | 'CREATIVE'
+    completionDate?: Date
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+    studyHours: number
+    actualTimeMinutes?: number
+    goalId: number
+    tags?: Tag[]
+    createdAt: Date
+    updatedAt: Date
 }
 
 export interface Achievement {
-    id: number;
-    title: string;
-    completionDate: string;
-    type: AchievementType;
-    relatedItemId: number;
-    relatedItemTitle: string;
-    description?: string;
-    createdAt: string;
-    updatedAt: string;
+    id: number
+    title: string
+    completionDate: Date
+    type: string
+    relatedItemId: number
+    relatedItemTitle: string
+    description: string
+    createdAt: Date
+    updatedAt: Date
 }
+
+export interface Tag {
+    id: number
+    name: string
+    color: string
+    userId: number
+    user?: {
+        id: number
+        username: string
+    }
+}
+
+export interface Subject {
+    id: number
+    name: string
+    description?: string
+    createdAt: Date
+    updatedAt: Date
+}
+
+export interface Category {
+    id: number
+    name: string
+    description?: string
+    subjectId?: number
+    createdAt: Date
+    updatedAt: Date
+}
+
+export type GoalStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'

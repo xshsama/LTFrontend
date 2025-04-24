@@ -1,13 +1,23 @@
 import { PlusOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Select, Space, Tag, theme } from 'antd'
 import React, { useState } from 'react'
-import { Category, Goal } from '../../types/goals'
+import { Category, Goal, Subject } from '../../types/goals'
 
 interface GoalFormProps {
   initialValues?: Partial<Goal>
-  subjects: { id: number; title: string }[]
+  subjects: Subject[]
   categories: Category[]
-  onFinish: (values: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onFinish: (values: {
+    subjectId?: number
+    title: string
+    priority?: string
+    categoryId?: number
+    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+    description?: string
+    targetDate?: Date
+    progress?: number
+    tags?: string[] // 明确定义为string[]
+  }) => void
   onCancel?: () => void
   loading?: boolean
 }
@@ -22,7 +32,14 @@ const GoalForm: React.FC<GoalFormProps> = ({
 }) => {
   const { token } = theme.useToken()
   const [form] = Form.useForm()
-  const [tags, setTags] = useState<string[]>(initialValues?.tags || [])
+  // 将Tag[]类型转换为string[]类型 - 假设我们取Tag对象中的名称字段
+  const [tags, setTags] = useState<string[]>(
+    initialValues?.tags
+      ? initialValues.tags.map((tag: any) =>
+          typeof tag === 'string' ? tag : tag.name,
+        )
+      : [],
+  )
   const [inputVisible, setInputVisible] = useState(false)
   const [inputValue, setInputValue] = useState('')
 
@@ -99,7 +116,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
               key={subject.id}
               value={subject.id}
             >
-              {subject.title}
+              {subject.name}
             </Select.Option>
           ))}
         </Select>

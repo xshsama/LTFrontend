@@ -25,10 +25,15 @@ export const getGoalsBySubject = async (subjectId: number): Promise<Goal[]> => {
 
 // 创建新目标
 export const createGoal = async (goalData: {
-    subjectId: number;
+    subjectId?: number;
     title: string;
     priority?: string;
     categoryId?: number;
+    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
+    description?: string;
+    targetDate?: Date;
+    progress?: number;
+    tags?: string[];
 }): Promise<Goal> => {
     try {
         const response = await apiClient.post('/api/goals', goalData);

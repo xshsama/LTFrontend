@@ -192,6 +192,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
           ? dayjs(initialValues.completionDate)
           : undefined,
         status: initialValues?.status || 'NOT_STARTED',
+        type: initialValues?.type || 'STEP', // 添加任务类型默认值
         weight: initialValues?.weight || 5,
         actualTimeMinutes: initialValues?.actualTimeMinutes || 0,
         tagIds: initialValues?.tags?.map((tag) => tag.id) || [],
@@ -258,6 +259,18 @@ const TaskForm: React.FC<TaskFormProps> = ({
           <Select.Option value="COMPLETED">已完成</Select.Option>
           <Select.Option value="OVERDUE">已过期</Select.Option>
           <Select.Option value="CANCELLED">已取消</Select.Option>
+        </Select>
+      </Form.Item>
+
+      <Form.Item
+        label="任务类型"
+        name="type"
+        rules={[{ required: true, message: '请选择任务类型' }]}
+      >
+        <Select placeholder="选择任务类型">
+          <Select.Option value="STEP">步骤类</Select.Option>
+          <Select.Option value="HABIT">习惯性</Select.Option>
+          <Select.Option value="CREATIVE">创作型</Select.Option>
         </Select>
       </Form.Item>
 

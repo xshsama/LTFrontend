@@ -150,7 +150,7 @@ const Dashboard: React.FC = () => {
   const { activeCourses, statistics } = useMemo(() => {
     const activeCourseIds = new Set(
       mockGoalData
-        .filter((g) => g.status === 'ONGOING')
+        .filter((g) => g.status === 'IN_PROGRESS')
         .map((g) => g.subjectId),
     )
 

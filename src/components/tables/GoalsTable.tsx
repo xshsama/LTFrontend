@@ -15,11 +15,11 @@ const { Link } = Typography
 
 interface GoalsTableProps {
   data: Goal[]
-  loading?: boolean
-  taskTags?: Record<number, TagType[]> // 关联的任务标签映射
-  tasks?: Task[] // 所有任务数据，用于计算关联任务的时间总和
-  subjects?: Subject[] // 所有学科数据
-  onRowClick?: (goal: Goal) => void
+  loading: boolean
+  taskTags: Record<number, TagType[]>
+  tasks: Task[]
+  subjects: Subject[]
+  onRowClick: (goal: Goal) => void
 }
 
 const GoalsTable: React.FC<GoalsTableProps> = ({
@@ -50,7 +50,7 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
         // 确保subjects是数组
         const subjectsArray = Array.isArray(subjects) ? subjects : []
         const subject = subjectsArray.find((s) => s.id === record.subjectId)
-        return subject ? subject.title : '-'
+        return subject ? subject.name : '-'
       },
     },
     {
@@ -63,7 +63,7 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
           size="small"
         />
       ),
-      sorter: (a, b) => a.progress - b.progress,
+      sorter: (a, b) => (a.progress ?? 0) - (b.progress ?? 0),
     },
     {
       title: '优先级',
@@ -100,26 +100,26 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       key: 'status',
       dataIndex: 'status',
       filters: [
-        { text: '未开始', value: 'NO_STARTED' },
-        { text: '进行中', value: 'ONGOING' },
+        { text: '未开始', value: 'NOT_STARTED' },
+        { text: '进行中', value: 'IN_PROGRESS' },
         { text: '已完成', value: 'COMPLETED' },
-        { text: '已过期', value: 'EXPIRED' },
+        { text: '已放弃', value: 'ABANDONED' },
       ],
       onFilter: (value: any, record: Goal) => record.status === value,
       render: (status: GoalStatus) => {
         const statusMap = {
-          NO_STARTED: '未开始',
-          ONGOING: '进行中',
+          NOT_STARTED: '未开始',
+          IN_PROGRESS: '进行中',
           COMPLETED: '已完成',
-          EXPIRED: '已过期',
+          ABANDONED: '已放弃',
         }
 
         let color = 'default'
         if (status === 'COMPLETED') {
           color = 'success'
-        } else if (status === 'ONGOING') {
+        } else if (status === 'IN_PROGRESS') {
           color = 'processing'
-        } else if (status === 'EXPIRED') {
+        } else if (status === 'ABANDONED') {
           color = 'error'
         }
 
@@ -183,9 +183,7 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
                 <Tag>+{goalTags.length - 3}</Tag>
               </Tooltip>
             )}
-            {goalTags.length === 0 && (
-              <span style={{ color: '#999' }}>无标签</span>
-            )}
+            {goalTags.length === 0 && <span className="no-tags">无标签</span>}
           </div>
         )
       },

@@ -3,18 +3,14 @@ import { Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React from 'react'
 import '../../styles/tables.css'
+import { Subject as BaseSubject } from '../../types/goals'
 
 const { Link } = Typography
 
 // 学科接口定义
-interface Subject {
-  id?: number
-  title: string
+interface Subject extends BaseSubject {
   categoriesCount?: number
   goalsCount?: number
-  description?: string
-  createdAt?: string
-  updatedAt?: string
   completionRate?: number
 }
 
@@ -61,10 +57,10 @@ const SubjectTable: React.FC<SubjectTableProps> = ({
   const columns: ColumnsType<Subject> = [
     {
       title: '学科名称',
-      dataIndex: 'title',
-      key: 'title',
+      dataIndex: 'name',
+      key: 'name',
       render: (text: string) => <Link strong>{text}</Link>,
-      sorter: (a, b) => a.title.localeCompare(b.title),
+      sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
       title: '分类数量',
@@ -101,10 +97,10 @@ const SubjectTable: React.FC<SubjectTableProps> = ({
       width: 160,
       sorter: (a, b) => {
         if (!a.createdAt || !b.createdAt) return 0
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        return a.createdAt.getTime() - b.createdAt.getTime()
       },
-      render: (date: string | undefined) =>
-        date ? new Date(date).toLocaleString('zh-CN') : '-',
+      render: (date: Date | undefined) =>
+        date ? date.toLocaleString('zh-CN') : '-',
     },
     {
       title: '操作',

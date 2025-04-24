@@ -280,7 +280,9 @@ const Courses: React.FC = () => {
 
           // 调试输出关联数量
           console.log(
-            `科目 ${subject.title} 的关联目标数: ${goalsCount}, 关联任务数: ${tasksCount}`,
+            `科目 ${
+              subject.name || subject.title
+            } 的关联目标数: ${goalsCount}, 关联任务数: ${tasksCount}`,
           )
 
           // 处理标签 - 可能是数组或其他格式
@@ -303,7 +305,7 @@ const Courses: React.FC = () => {
           const courseData = {
             id: subject.id || Date.now(), // 如果id为undefined，使用时间戳作为临时id
             key: subject.id ? subject.id.toString() : Date.now().toString(), // 安全地调用toString
-            name: subject.title || '未命名学科', // 提供默认名称
+            name: subject.name || subject.title || '未命名学科', // 兼容新旧数据格式
             categoryId: categoryId, // 保存分类ID用于编辑
             category: categoryName, // 显示实际的分类名称
             relatedGoalsCount: goalsCount,
@@ -346,7 +348,7 @@ const Courses: React.FC = () => {
       if (isEditing && editingCourse) {
         // 更新现有课程
         await updateSubject(editingCourse.id as unknown as number, {
-          title: data.title,
+          name: data.name,
           tags: data.tags,
           categoryId: data.categoryId,
         })
@@ -354,7 +356,7 @@ const Courses: React.FC = () => {
       } else {
         // 创建新课程
         await createSubject({
-          title: data.title,
+          name: data.name,
           tags: data.tags,
           categoryId: data.categoryId,
         })
@@ -481,13 +483,13 @@ const Courses: React.FC = () => {
               editingCourse
                 ? {
                     id: Number(editingCourse.id),
-                    title: editingCourse.name,
+                    name: editingCourse.name,
                     categoryId: editingCourse.categoryId
                       ? Number(editingCourse.categoryId)
                       : undefined,
                     // Subject 接口需要这些字段
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
                   }
                 : undefined
             }

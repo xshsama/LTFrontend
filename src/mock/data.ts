@@ -1,5 +1,5 @@
-import { Course } from '../types/course';
-import { Achievement, Goal, Task } from '../types/goals';
+import { Course } from 'types/course';
+import { Achievement, Goal, Task } from 'types/goals'; // Re-added Tag import
 
 export const mockCourseData: Course[] = [
     {
@@ -33,23 +33,49 @@ export const mockGoalData: Goal[] = [
         id: 1,
         title: '完成 React Hooks 学习',
         priority: 'HIGH',
-        status: 'ONGOING',
+        status: 'IN_PROGRESS',
         progress: 45,
-        createdAt: '2025-04-01T08:00:00Z',
-        updatedAt: '2025-04-10T15:30:00Z',
+        createdAt: new Date('2025-04-01T08:00:00Z'), // Convert to Date object
+        updatedAt: new Date('2025-04-10T15:30:00Z'), // Convert to Date object
         subjectId: 1,
-        tags: ['React', 'Hooks']
+        tags: [
+            {
+                id: 1,
+                name: 'React',
+                color: 'blue',
+                userId: 1
+            },
+            {
+                id: 2,
+                name: 'Hooks',
+                color: 'green',
+                userId: 1
+            }
+        ]
     },
     {
         id: 2,
         title: '掌握 Spring Security',
         priority: 'MEDIUM',
-        status: 'ONGOING',
+        status: 'IN_PROGRESS', // Correct status
         progress: 30,
-        createdAt: '2025-04-02T09:00:00Z',
-        updatedAt: '2025-04-10T16:45:00Z',
+        createdAt: new Date('2025-04-02T09:00:00Z'), // Convert to Date object
+        updatedAt: new Date('2025-04-10T16:45:00Z'), // Convert to Date object
         subjectId: 2,
-        tags: ['Java', 'Security']
+        tags: [
+            {
+                id: 3,
+                name: 'Java',
+                color: 'red',
+                userId: 1
+            },
+            {
+                id: 4,
+                name: 'Security',
+                color: 'orange',
+                userId: 1
+            }
+        ]
     }
 ];
 
@@ -59,11 +85,14 @@ export const mockTaskData: Task[] = [
         title: '学习 useEffect 钩子',
         weight: 8,
         status: 'IN_PROGRESS',
+        type: 'STEP', // 添加任务类型
         completionDate: undefined,
+        priority: 'HIGH', // 添加必需的priority属性
+        studyHours: 3, // 添加必需的studyHours属性
         actualTimeMinutes: 45,
         goalId: 1,
-        createdAt: '2025-04-01T08:30:00Z',
-        updatedAt: '2025-04-10T15:30:00Z',
+        createdAt: new Date('2025-04-01T08:30:00Z'), // Convert to Date object
+        updatedAt: new Date('2025-04-10T15:30:00Z'), // Convert to Date object
         tags: [
             {
                 id: 1,
@@ -84,11 +113,14 @@ export const mockTaskData: Task[] = [
         title: '实现用户认证',
         weight: 9,
         status: 'NOT_STARTED',
+        type: 'STEP', // 添加任务类型
         completionDate: undefined,
+        priority: 'MEDIUM', // 添加必需的priority属性
+        studyHours: 5, // 添加必需的studyHours属性
         actualTimeMinutes: 0,
         goalId: 2,
-        createdAt: '2025-04-02T09:30:00Z',
-        updatedAt: '2025-04-10T16:45:00Z',
+        createdAt: new Date('2025-04-02T09:30:00Z'), // Convert to Date object
+        updatedAt: new Date('2025-04-10T16:45:00Z'), // Convert to Date object
         tags: [
             {
                 id: 3,
@@ -110,23 +142,23 @@ export const mockAchievementData: Achievement[] = [
     {
         id: 1,
         title: '完成 React Router 学习',
-        completionDate: '2025-03-30',
+        completionDate: new Date('2025-03-30'), // Convert to Date object
         type: '目标',
         relatedItemId: 1,
         relatedItemTitle: 'React 路由管理',
         description: '掌握了 React Router 的核心概念和实践应用',
-        createdAt: '2025-03-30T10:00:00Z',
-        updatedAt: '2025-03-30T10:00:00Z'
+        createdAt: new Date('2025-03-30T10:00:00Z'), // Convert to Date object
+        updatedAt: new Date('2025-03-30T10:00:00Z') // Convert to Date object
     },
     {
         id: 2,
         title: '实现数据库配置',
-        completionDate: '2025-03-25',
+        completionDate: new Date('2025-03-25'), // Convert to Date object
         type: '任务',
         relatedItemId: 2,
         relatedItemTitle: '配置 Spring Data JPA',
         description: '成功配置并测试了数据库连接',
-        createdAt: '2025-03-25T14:30:00Z',
-        updatedAt: '2025-03-25T14:30:00Z'
+        createdAt: new Date('2025-03-25T14:30:00Z'), // Convert to Date object
+        updatedAt: new Date('2025-03-25T14:30:00Z') // Convert to Date object
     }
 ];
