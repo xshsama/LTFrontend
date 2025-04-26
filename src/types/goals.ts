@@ -42,7 +42,7 @@ export interface Achievement {
 
 export interface Tag {
     id: number
-    name: string
+    title: string
     color: string
     userId: number
     user?: {
@@ -53,7 +53,7 @@ export interface Tag {
 
 export interface Subject {
     id: number
-    name: string
+    title: string
     description?: string
     createdAt: Date
     updatedAt: Date

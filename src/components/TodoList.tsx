@@ -14,8 +14,8 @@ const TodoList: React.FC<TodoListProps> = ({ tasks }) => {
       dataSource={tasks}
       renderItem={(task) => (
         <List.Item>
-          <Checkbox checked={task.status === 'COMPLETED'}>
-            <Text delete={task.status === 'COMPLETED'}>{task.title}</Text>
+          <Checkbox checked={task.status === 'ARCHIVED'}>
+            <Text delete={task.status === 'ARCHIVED'}>{task.title}</Text>
           </Checkbox>
         </List.Item>
       )}

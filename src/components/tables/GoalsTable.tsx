@@ -50,7 +50,7 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
         // 确保subjects是数组
         const subjectsArray = Array.isArray(subjects) ? subjects : []
         const subject = subjectsArray.find((s) => s.id === record.subjectId)
-        return subject ? subject.name : '-'
+        return subject ? subject.title : '-'
       },
     },
     {
@@ -170,14 +170,14 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
                 color={tag.color || 'blue'}
                 key={tag.id}
               >
-                {tag.name}
+                {tag.title}
               </Tag>
             ))}
             {goalTags.length > 3 && (
               <Tooltip
                 title={goalTags
                   .slice(3)
-                  .map((tag) => tag.name)
+                  .map((tag) => tag.title)
                   .join(', ')}
               >
                 <Tag>+{goalTags.length - 3}</Tag>

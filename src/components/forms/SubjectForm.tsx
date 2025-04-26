@@ -63,7 +63,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
-        title: initialData.name, // 使用name而不是title
+        title: initialData.title,
       })
 
       // 如果是编辑模式且有学科ID，则通过API获取该学科的分类信息
@@ -163,7 +163,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
       // 构建提交数据
       const submissionData: Subject = {
         ...(initialData || { id: Date.now() }), // 为新学科生成临时ID
-        name: values.title,
+        title: values.title,
         categoryId: categoryId,
         createdAt: initialData?.createdAt || new Date(),
         updatedAt: new Date(),

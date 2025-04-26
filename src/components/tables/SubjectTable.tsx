@@ -57,10 +57,10 @@ const SubjectTable: React.FC<SubjectTableProps> = ({
   const columns: ColumnsType<Subject> = [
     {
       title: '学科名称',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'title',
+      key: 'title',
       render: (text: string) => <Link strong>{text}</Link>,
-      sorter: (a, b) => a.name.localeCompare(b.name),
+      sorter: (a, b) => a.title.localeCompare(b.title),
     },
     {
       title: '分类数量',

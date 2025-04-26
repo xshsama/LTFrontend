@@ -38,9 +38,20 @@ export const getTaskById = async (id: number): Promise<Task> => {
 export const createTask = async (taskData: {
     goalId: number;
     title: string;
-    description?: string;
+    type: 'STEP' | 'HABIT' | 'CREATIVE';
+    status?: 'ACTIVE' | 'ARCHIVED' | 'BLOCKED';
     weight?: number;
     estimatedTimeMinutes?: number;
+    tags?: any[];
+    tagIds?: number[];
+    // 以下是特定任务类型的字段
+    stepsJson?: string;
+    frequency?: string;
+    daysOfWeekJson?: string;
+    customPattern?: string;
+    publicationFormats?: string;
+    licenseType?: string;
+    currentPhase?: string;
 }): Promise<Task> => {
     try {
         const response = await apiClient.post('/api/tasks', taskData);

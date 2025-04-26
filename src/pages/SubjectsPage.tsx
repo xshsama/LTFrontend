@@ -133,7 +133,7 @@ const SubjectsPage: React.FC = () => {
           renderItem={(subject) => (
             <List.Item>
               <Card
-                title={subject.name}
+                title={subject.title}
                 hoverable
                 actions={[
                   <EditOutlined

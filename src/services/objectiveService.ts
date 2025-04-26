@@ -1,5 +1,4 @@
 import type { AxiosError } from 'axios';
-import axios from 'axios';
 import { Category, Goal, Subject, Tag, Task } from '../types/goals';
 import apiClient from './apiService';
 
@@ -9,12 +8,58 @@ const API_BASE_URL = 'http://localhost:8080';
 // 获取学科列表
 export const getSubjects = async (): Promise<Subject[]> => {
     try {
-        // 尝试直接使用 axios 而不是 apiClient，因为 /api/subjects 理论上不需要认证
-        const response = await axios.get(`${API_BASE_URL}/api/subjects`);
-        return response.data;
+        // 使用 apiClient 而不是 axios，确保带上认证信息
+        const response = await apiClient.get('/api/subjects');
+
+        // 检查响应数据结构并打印日志以便调试
+        console.log('获取学科列表原始响应:', response.data);
+
+        if (!response.data) {
+            console.warn('API返回空数据');
+            return [];
+        }
+
+        let rawSubjects: any[] = [];
+        // 处理不同格式的响应数据
+        if (response.data.code === 200) {
+            // 格式1: {code:200, data: [...]}
+            rawSubjects = Array.isArray(response.data.data) ? response.data.data : [];
+        } else if (Array.isArray(response.data)) {
+            // 格式2: [...]
+            rawSubjects = response.data;
+        } else if (response.data && typeof response.data === 'object') {
+            if (Array.isArray(response.data.subjects)) {
+                // 格式3: {subjects: [...]}
+                rawSubjects = response.data.subjects;
+            } else if (Array.isArray(response.data.result)) {
+                // 格式4: {result: [...]}
+                rawSubjects = response.data.result;
+            } else if (Array.isArray(response.data.data)) {
+                // 格式5: {data: [...]}
+                rawSubjects = response.data.data;
+            } else {
+                // 格式6: 单个对象
+                rawSubjects = [response.data];
+            }
+        }
+
+        // 确保 subjects 是正确格式的数组
+        const subjects = rawSubjects.map((raw: any) => {
+            // 这里是关键修改：处理 name 和 title 字段不匹配的问题
+            return {
+                id: raw.id,
+                title: raw.title || raw.name || `学科 ${raw.id}`, // 优先使用 title，如果没有则使用 name
+                description: raw.description || '',
+                createdAt: raw.createdAt ? new Date(raw.createdAt) : new Date(),
+                updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date()
+            } as Subject;
+        });
+
+        console.log('处理后的学科列表:', subjects);
+        return Array.isArray(subjects) ? subjects : [];
     } catch (error) {
         console.error('获取学科列表失败:', error);
-        throw error;
+        return []; // 返回空数组而不是抛出错误，以防止组件崩溃
     }
 };
 
@@ -36,7 +81,6 @@ export const getTags = async (): Promise<Tag[]> => {
         const response = await apiClient.get('/api/tags');
         console.log('完整API响应:', {
             data: response.data,
-
         });
 
         // 检查响应数据结构
@@ -78,7 +122,7 @@ export const getTags = async (): Promise<Tag[]> => {
 
         // 验证并限制返回的标签数量
         const validTags = cleanTags
-            .filter((tag: Tag | null): tag is Tag => tag !== null && tag.id !== undefined && tag.name !== undefined)
+            .filter((tag: Tag | null): tag is Tag => tag !== null && tag.id !== undefined && tag.title !== undefined)
             .slice(0, 1000); // 最多返回1000个标签
 
         console.log('获取到的有效标签数量:', validTags.length, '标签样例:', validTags[0]);

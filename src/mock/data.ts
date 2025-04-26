@@ -41,13 +41,13 @@ export const mockGoalData: Goal[] = [
         tags: [
             {
                 id: 1,
-                name: 'React',
+                title: 'React',
                 color: 'blue',
                 userId: 1
             },
             {
                 id: 2,
-                name: 'Hooks',
+                title: 'Hooks',
                 color: 'green',
                 userId: 1
             }
@@ -65,13 +65,13 @@ export const mockGoalData: Goal[] = [
         tags: [
             {
                 id: 3,
-                name: 'Java',
+                title: 'Java',
                 color: 'red',
                 userId: 1
             },
             {
                 id: 4,
-                name: 'Security',
+                title: 'Security',
                 color: 'orange',
                 userId: 1
             }
@@ -96,13 +96,13 @@ export const mockTaskData: Task[] = [
         tags: [
             {
                 id: 1,
-                name: 'React',
+                title: 'React',
                 color: 'blue',
                 userId: 1
             },
             {
                 id: 2,
-                name: 'Hooks',
+                title: 'Hooks',
                 color: 'green',
                 userId: 1
             }
@@ -124,13 +124,13 @@ export const mockTaskData: Task[] = [
         tags: [
             {
                 id: 3,
-                name: '认证',
+                title: '认证',
                 color: 'orange',
                 userId: 1
             },
             {
                 id: 4,
-                name: '安全',
+                title: '安全',
                 color: 'red',
                 userId: 1
             }

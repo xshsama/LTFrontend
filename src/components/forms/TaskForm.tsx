@@ -14,15 +14,17 @@ import dayjs from 'dayjs'
 import React, { useEffect, useState } from 'react'
 import { createTag, getTags } from '../../services/objectiveService'
 import { setTaskTags } from '../../services/taskTagService'
-import { Goal, Tag as TagType, Task } from '../../types/goals'
+import { Goal, Tag as TagFromGoals } from '../../types/goals'
+import { CreateTaskRequest, Task } from '../../types/task'
+
+// 使用来自goals.ts的Tag类型，与服务返回的数据一致
+type TagType = TagFromGoals
 
 interface TaskFormProps {
   initialValues?: Partial<Task>
-  goals: Goal[] // 可用的目标列表，用于关联
-  availableTags: TagType[] // 可用的标签列表
-  onFinish: (
-    values: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
-  ) => Promise<Task> | void
+  goals: Goal[]
+  availableTags: TagType[]
+  onFinish: (values: CreateTaskRequest) => Promise<Task> | void
   onCancel?: () => void
   loading?: boolean
 }
@@ -45,34 +47,28 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const [newlyCreatedTags, setNewlyCreatedTags] = useState<TagType[]>([])
   const [allTags, setAllTags] = useState<TagType[]>([...availableTags])
 
-  // 在组件挂载时获取最新标签数据
   useEffect(() => {
     const fetchTags = async () => {
       try {
         const latestTags = await getTags()
-        console.log('从数据库获取到的标签数据:', latestTags)
         if (latestTags && Array.isArray(latestTags)) {
-          setAllTags(latestTags)
+          // 直接使用服务器返回的标签，不进行类型转换
+          setAllTags(latestTags as any)
         }
       } catch (error) {
         console.error('获取标签数据失败:', error)
       }
     }
-
     fetchTags()
   }, [])
 
-  // 处理添加新标签
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value)
   }
 
-  // 刷新标签列表
   const refreshTags = async () => {
     try {
       const latestTags = await getTags()
-      // 创建一个props更新函数 - 但由于这是一个组件内部逻辑，我们在这里只做日志记录
-      console.log('标签列表已更新，最新标签数量:', latestTags.length)
       return latestTags
     } catch (error) {
       console.error('获取最新标签列表失败:', error)
@@ -81,43 +77,26 @@ const TaskForm: React.FC<TaskFormProps> = ({
   }
 
   const handleInputConfirm = async () => {
-    if (inputValue.trim() === '') {
-      return
-    }
+    if (inputValue.trim() === '') return
 
     try {
-      // 调用后端API创建新标签
-      const newTag = await createTag(inputValue.trim())
+      // 创建新标签
+      const newTag: any = await createTag(inputValue.trim())
 
-      // 调用API获取最新的标签列表
-      const latestTags = await refreshTags()
+      // 直接使用类型断言处理类型不匹配问题
+      setNewlyCreatedTags([...newlyCreatedTags, newTag])
+      setAllTags([...allTags, newTag])
 
-      // 更新本地标签列表
-      if (latestTags) {
-        // 如果是父组件传入的availableTags，这里我们不能直接修改它
-        // 所以我们保存新创建的标签到本地状态
-        const newTagsList = [...newlyCreatedTags, newTag]
-        setNewlyCreatedTags(newTagsList)
-      } else {
-        // 如果获取最新标签失败，至少更新本地新创建标签列表
-        const newTagsList = [...newlyCreatedTags, newTag]
-        setNewlyCreatedTags(newTagsList)
-      }
-
-      // 自动选中新创建的标签
+      // 更新选中的标签ID列表
       const newSelectedTagIds = [...selectedTagIds, newTag.id]
       setSelectedTagIds(newSelectedTagIds)
-      form.setFieldsValue({
-        tagIds: newSelectedTagIds,
-      })
-
+      form.setFieldsValue({ tagIds: newSelectedTagIds })
       message.success(`标签 "${inputValue}" 创建成功`)
     } catch (error) {
       console.error('创建标签失败:', error)
       message.error('创建标签失败，请重试')
     }
 
-    // 重置输入框
     setInputVisible(false)
     setInputValue('')
   }
@@ -133,47 +112,51 @@ const TaskForm: React.FC<TaskFormProps> = ({
     if (!selectedTagIds.includes(tagId)) {
       const newSelectedTagIds = [...selectedTagIds, tagId]
       setSelectedTagIds(newSelectedTagIds)
-      form.setFieldsValue({
-        tagIds: newSelectedTagIds,
-      })
+      form.setFieldsValue({ tagIds: newSelectedTagIds })
     }
   }
 
   const handleTagDeselect = (tagId: number) => {
     const newSelectedTagIds = selectedTagIds.filter((id) => id !== tagId)
     setSelectedTagIds(newSelectedTagIds)
-    form.setFieldsValue({
-      tagIds: newSelectedTagIds,
-    })
+    form.setFieldsValue({ tagIds: newSelectedTagIds })
   }
 
-  // 处理表单提交
   const handleFormFinish = async (values: any) => {
-    const formattedValues = {
-      ...values,
-      completionDate: values.completionDate
-        ? values.completionDate.format('YYYY-MM-DD')
-        : undefined,
-      status: values.status || 'NOT_STARTED',
-      weight: values.weight || 5,
-      actualTimeMinutes: values.actualTimeMinutes || 0,
-      estimatedTimeMinutes: values.estimatedTimeMinutes,
-      tags: selectedTagIds.map((id) => {
-        // 同时在可用标签列表和新创建的标签列表中查找
-        const allTags = [...availableTags, ...newlyCreatedTags]
-        return allTags.find((tag) => tag.id === id)!
+    // 根据CreateTaskRequest类型准备提交数据
+    const formattedValues: CreateTaskRequest = {
+      title: values.title,
+      type: values.type,
+      goalId: values.goalId,
+      tagIds: selectedTagIds,
+      // 可选添加其他字段
+      metadata: JSON.stringify({
+        weight: values.weight || 5,
+        status: values.status || 'ACTIVE',
+        completionDate: values.completionDate
+          ? values.completionDate.format('YYYY-MM-DD')
+          : undefined,
+        actualTimeMinutes: values.actualTimeMinutes || 0,
+        estimatedTimeMinutes: values.estimatedTimeMinutes,
       }),
     }
 
-    try {
-      // 先保存任务本身并获取任务ID
-      const savedTask = await onFinish(formattedValues)
+    // 根据任务类型添加特定字段
+    if (values.type === 'STEP') {
+      formattedValues.stepsJson = values.stepsJson || '[]'
+    } else if (values.type === 'HABIT') {
+      formattedValues.frequency = values.frequency
+      formattedValues.daysOfWeekJson = values.daysOfWeekJson
+      formattedValues.customPattern = values.customPattern
+    } else if (values.type === 'CREATIVE') {
+      formattedValues.publicationFormats = values.publicationFormats
+      formattedValues.licenseType = values.licenseType
+    }
 
-      // 如果是编辑现有任务或成功创建了新任务，处理标签关系
+    try {
+      const savedTask = await onFinish(formattedValues)
       if (savedTask && savedTask.id && selectedTagIds.length > 0) {
-        // 使用taskTagService设置任务的标签
         await setTaskTags(savedTask.id, selectedTagIds)
-        console.log('任务标签更新成功')
       }
     } catch (error) {
       console.error('保存任务或标签关系失败:', error)
@@ -191,11 +174,16 @@ const TaskForm: React.FC<TaskFormProps> = ({
         completionDate: initialValues?.completionDate
           ? dayjs(initialValues.completionDate)
           : undefined,
-        status: initialValues?.status || 'NOT_STARTED',
-        type: initialValues?.type || 'STEP', // 添加任务类型默认值
-        weight: initialValues?.weight || 5,
-        actualTimeMinutes: initialValues?.actualTimeMinutes || 0,
-        tagIds: initialValues?.tags?.map((tag) => tag.id) || [],
+        status: initialValues?.status || 'ACTIVE',
+        type: initialValues?.type || 'STEP',
+        // 从metadata中提取额外字段，如果存在的话
+        weight: initialValues?.metadata
+          ? JSON.parse(initialValues.metadata || '{}').weight || 5
+          : 5,
+        actualTimeMinutes: initialValues?.metadata
+          ? JSON.parse(initialValues.metadata || '{}').actualTimeMinutes || 0
+          : 0,
+        tagIds: initialValues?.tags?.map((tag: any) => tag.id) || [],
       }}
     >
       <Form.Item
@@ -213,12 +201,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
       >
         <Select
           placeholder="选择关联的学习目标"
-          optionFilterProp="children"
           showSearch
         >
           {goals.map((goal) => (
             <Select.Option
-              key={`goal-${goal.id}-${goal.title}`}
+              key={`goal-${goal.id}`}
               value={goal.id}
             >
               {goal.title}
@@ -244,7 +231,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
           min={1}
           max={10}
           style={{ width: '100%' }}
-          placeholder="请输入1-10之间的权重值"
         />
       </Form.Item>
 
@@ -254,11 +240,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
         rules={[{ required: true, message: '请选择状态' }]}
       >
         <Select placeholder="选择状态">
-          <Select.Option value="NOT_STARTED">未开始</Select.Option>
-          <Select.Option value="IN_PROGRESS">进行中</Select.Option>
-          <Select.Option value="COMPLETED">已完成</Select.Option>
-          <Select.Option value="OVERDUE">已过期</Select.Option>
-          <Select.Option value="CANCELLED">已取消</Select.Option>
+          <Select.Option value="ACTIVE">进行中</Select.Option>
+          <Select.Option value="ARCHIVED">已完成</Select.Option>
+          <Select.Option value="BLOCKED">已阻塞</Select.Option>
         </Select>
       </Form.Item>
 
@@ -274,11 +258,117 @@ const TaskForm: React.FC<TaskFormProps> = ({
         </Select>
       </Form.Item>
 
+      {/* 根据任务类型显示特定字段 */}
+      {form.getFieldValue('type') === 'STEP' && (
+        <Form.Item
+          label="步骤设置"
+          name="stepsJson"
+          tooltip="请输入任务步骤的JSON格式数据"
+        >
+          <Input.TextArea
+            placeholder='例如: [{"id":"1","title":"第一步","description":"描述..."}]'
+            rows={4}
+          />
+        </Form.Item>
+      )}
+
+      {form.getFieldValue('type') === 'HABIT' && (
+        <>
+          <Form.Item
+            label="频率"
+            name="frequency"
+            rules={[
+              {
+                required: form.getFieldValue('type') === 'HABIT',
+                message: '请选择频率',
+              },
+            ]}
+          >
+            <Select placeholder="选择习惯频率">
+              <Select.Option value="DAILY">每日</Select.Option>
+              <Select.Option value="WEEKLY">每周</Select.Option>
+              <Select.Option value="MONTHLY">每月</Select.Option>
+              <Select.Option value="CUSTOM">自定义</Select.Option>
+            </Select>
+          </Form.Item>
+
+          {form.getFieldValue('frequency') === 'WEEKLY' && (
+            <Form.Item
+              label="周几"
+              name="daysOfWeekJson"
+              rules={[
+                {
+                  required: form.getFieldValue('frequency') === 'WEEKLY',
+                  message: '请选择周几',
+                },
+              ]}
+              tooltip="选择一周中需要完成的日子"
+            >
+              <Select
+                mode="multiple"
+                placeholder="选择每周几需要完成"
+              >
+                <Select.Option value="1">周一</Select.Option>
+                <Select.Option value="2">周二</Select.Option>
+                <Select.Option value="3">周三</Select.Option>
+                <Select.Option value="4">周四</Select.Option>
+                <Select.Option value="5">周五</Select.Option>
+                <Select.Option value="6">周六</Select.Option>
+                <Select.Option value="0">周日</Select.Option>
+              </Select>
+            </Form.Item>
+          )}
+
+          {form.getFieldValue('frequency') === 'CUSTOM' && (
+            <Form.Item
+              label="自定义模式"
+              name="customPattern"
+              tooltip="请输入自定义的重复模式"
+            >
+              <Input placeholder="例如: 每3天一次" />
+            </Form.Item>
+          )}
+        </>
+      )}
+
+      {form.getFieldValue('type') === 'CREATIVE' && (
+        <>
+          <Form.Item
+            label="发布格式"
+            name="publicationFormats"
+            tooltip="选择作品的发布格式"
+          >
+            <Select
+              placeholder="选择发布格式"
+              mode="multiple"
+            >
+              <Select.Option value="PDF">PDF</Select.Option>
+              <Select.Option value="EPUB">EPUB</Select.Option>
+              <Select.Option value="HTML">HTML</Select.Option>
+              <Select.Option value="OTHER">其他</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="许可证类型"
+            name="licenseType"
+            tooltip="选择作品的许可证类型"
+          >
+            <Select placeholder="选择许可证类型">
+              <Select.Option value="CC_BY">CC BY</Select.Option>
+              <Select.Option value="ALL_RIGHTS_RESERVED">
+                保留所有权利
+              </Select.Option>
+            </Select>
+          </Form.Item>
+        </>
+      )}
+
       <Form.Item
         label="标签"
         name="tagIds"
         help={
-          availableTags.length === 0 && newlyCreatedTags.length === 0
+          allTags.length === 0
             ? '您还没有任何标签，请在下方输入框创建新标签'
             : null
         }
@@ -287,26 +377,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
           mode="multiple"
           placeholder="选择或创建标签"
           style={{ width: '100%' }}
-          optionFilterProp="children"
           onSelect={handleTagSelect}
           onDeselect={handleTagDeselect}
-          labelInValue={false}
-          optionLabelProp="label"
-          notFoundContent={
-            <div style={{ padding: 8, textAlign: 'center' }}>
-              {availableTags.length === 0 && newlyCreatedTags.length === 0
-                ? '暂无标签，请在下方创建'
-                : '没有匹配的标签'}
-            </div>
-          }
-          options={[...availableTags, ...newlyCreatedTags]
-            .filter((tag) => tag && tag.id && tag.name)
-            .map((tag) => ({
-              key: `tag-${tag.id}`,
-              value: tag.id,
-              label: tag.name,
-              children: <Tag color={tag.color || 'blue'}>{tag.name}</Tag>,
-            }))}
           dropdownRender={(menu) => (
             <>
               {menu}
@@ -320,12 +392,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   placeholder="输入并回车以添加"
                 />
                 <a
-                  style={{
-                    flex: 'none',
-                    padding: '0 8px',
-                    display: 'block',
-                    cursor: 'pointer',
-                  }}
+                  style={{ flex: 'none', padding: '0 8px', cursor: 'pointer' }}
                   onClick={handleInputConfirm}
                 >
                   <PlusOutlined /> 添加标签
@@ -333,6 +400,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
               </div>
             </>
           )}
+          options={allTags.map((tag) => ({
+            key: tag.id,
+            value: tag.id,
+            label: tag.title,
+            children: <Tag color={tag.color || 'blue'}>{tag.title}</Tag>,
+          }))}
         />
       </Form.Item>
 

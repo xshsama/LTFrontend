@@ -32,9 +32,10 @@ const { Title } = Typography
 
 // Define Course interface
 export interface Course {
-  id: string
+  id: string | number
   key: string
-  name: string
+  name: string // 保持不变，因为其他地方如列定义等都依赖此属性
+  title?: string // 添加可选的title字段，以适应后端返回
   category: string
   categoryId?: number // 添加categoryId字段
   description?: string // 添加description字段
@@ -104,14 +105,14 @@ const createCourseColumns = (
         return (
           <>
             {tags.map((tag, index) => {
-              // 如果tag是对象（例如 {id: 1, name: 'tag1'}），使用name属性
+              // 如果tag是对象（例如 {id: 1, name: 'tag1', title: 'tag1'}），使用title或name属性
               if (typeof tag === 'object' && tag !== null) {
                 return (
                   <Tag
                     key={tag.id || index}
                     color={tag.color || 'blue'}
                   >
-                    {tag.name}
+                    {tag.title || tag.name || '未命名标签'}
                   </Tag>
                 )
               }
@@ -280,9 +281,7 @@ const Courses: React.FC = () => {
 
           // 调试输出关联数量
           console.log(
-            `科目 ${
-              subject.name || subject.title
-            } 的关联目标数: ${goalsCount}, 关联任务数: ${tasksCount}`,
+            `科目 ${subject.title} 的关联目标数: ${goalsCount}, 关联任务数: ${tasksCount}`,
           )
 
           // 处理标签 - 可能是数组或其他格式
@@ -305,7 +304,8 @@ const Courses: React.FC = () => {
           const courseData = {
             id: subject.id || Date.now(), // 如果id为undefined，使用时间戳作为临时id
             key: subject.id ? subject.id.toString() : Date.now().toString(), // 安全地调用toString
-            name: subject.name || subject.title || '未命名学科', // 兼容新旧数据格式
+            title: subject.title || subject.name || '未命名学科', // 兼容新旧数据格式，优先使用title，然后才是name
+            name: subject.title || subject.name || '未命名学科', // 确保同时设置name属性，以匹配Course接口
             categoryId: categoryId, // 保存分类ID用于编辑
             category: categoryName, // 显示实际的分类名称
             relatedGoalsCount: goalsCount,
@@ -330,6 +330,8 @@ const Courses: React.FC = () => {
         relatedTasksCount: Number(course.relatedTasksCount) || 0,
         // 确保标签是数组
         tags: Array.isArray(course.tags) ? course.tags : [],
+        // 确保同时存在name和title属性
+        name: course.name || course.title || '未命名学科',
       }))
 
       setCourses(validCourses)
@@ -348,7 +350,7 @@ const Courses: React.FC = () => {
       if (isEditing && editingCourse) {
         // 更新现有课程
         await updateSubject(editingCourse.id as unknown as number, {
-          name: data.name,
+          title: data.title,
           tags: data.tags,
           categoryId: data.categoryId,
         })
@@ -356,7 +358,7 @@ const Courses: React.FC = () => {
       } else {
         // 创建新课程
         await createSubject({
-          name: data.name,
+          title: data.title,
           tags: data.tags,
           categoryId: data.categoryId,
         })
@@ -483,7 +485,7 @@ const Courses: React.FC = () => {
               editingCourse
                 ? {
                     id: Number(editingCourse.id),
-                    name: editingCourse.name,
+                    title: editingCourse.name,
                     categoryId: editingCourse.categoryId
                       ? Number(editingCourse.categoryId)
                       : undefined,

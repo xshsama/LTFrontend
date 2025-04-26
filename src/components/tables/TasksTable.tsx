@@ -46,20 +46,16 @@ const typeNameMap: Record<string, string> = {
 
 // 状态颜色映射
 const statusColorMap: Record<string, string> = {
-  NOT_STARTED: 'default',
-  IN_PROGRESS: 'processing',
-  COMPLETED: 'success',
-  OVERDUE: 'error',
-  CANCELLED: 'warning',
+  ACTIVE: 'processing',
+  ARCHIVED: 'success',
+  BLOCKED: 'error',
 }
 
 // 状态中文名称映射
 const statusNameMap: Record<string, string> = {
-  NOT_STARTED: '未开始',
-  IN_PROGRESS: '进行中',
-  COMPLETED: '已完成',
-  OVERDUE: '已过期',
-  CANCELLED: '已取消',
+  ACTIVE: '进行中',
+  ARCHIVED: '已完成',
+  BLOCKED: '已阻塞',
 }
 
 const TasksTable: React.FC<TasksTableProps> = ({
@@ -190,20 +186,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
       ),
     },
     {
-      title: '权重',
-      dataIndex: 'weight',
-      key: 'weight',
-      width: 80,
-      sorter: (a, b) => (a.weight || 0) - (b.weight || 0),
-    },
-    {
-      title: '实际时间(分钟)',
-      dataIndex: 'actualTimeMinutes',
-      key: 'actualTimeMinutes',
-      width: 120,
-      sorter: (a, b) => (a.actualTimeMinutes || 0) - (b.actualTimeMinutes || 0),
-    },
-    {
       title: '完成日期',
       dataIndex: 'completionDate',
       key: 'completionDate',
@@ -225,13 +207,13 @@ const TasksTable: React.FC<TasksTableProps> = ({
       className: 'action-column',
       render: (_, record: Task) => (
         <Space size="small">
-          {record.status !== 'COMPLETED' && (
+          {record.status !== 'ARCHIVED' && (
             <Tooltip title="标记为已完成">
               <Button
                 type="link"
                 size="small"
                 icon={<CheckOutlined />}
-                onClick={(e) => handleStatusChange(e, record.id!, 'COMPLETED')}
+                onClick={(e) => handleStatusChange(e, record.id!, 'ARCHIVED')}
               />
             </Tooltip>
           )}
