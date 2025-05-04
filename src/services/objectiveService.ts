@@ -208,7 +208,7 @@ export const getGoals = async (): Promise<Goal[]> => {
 // 获取任务列表
 export const getTasks = async (goalId?: number): Promise<Task[]> => {
     try {
-        const url = goalId ? `/tasks?goalId=${goalId}` : '/api/tasks';
+        const url = goalId ? `/api/tasks?goalId=${goalId}` : '/api/tasks';
         const response = await apiClient.get(url);
         if (response.data?.code === 200) {
             return response.data.data;

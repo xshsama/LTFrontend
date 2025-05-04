@@ -1,0 +1,55 @@
+.tag-select {
+  width: 100%;
+}
+
+.tag-input-container {
+  display: flex;
+  flex-wrap: nowrap;
+  padding: 8px;
+}
+
+.tag-input {
+  flex: auto;
+}
+
+.tag-add-button {
+  flex: none;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.form-actions {
+  margin-bottom: 0;
+  text-align: right;
+}
+
+.full-width-input {
+  width: 100%;
+}
+
+/* 步骤设置相关样式 */
+.step-item {
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+  background-color: #fafafa;
+  transition: all 0.3s;
+}
+
+.step-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+  border-color: #d9d9d9;
+}
+
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.step-number {
+  font-weight: 500;
+  color: #1890ff;
+}

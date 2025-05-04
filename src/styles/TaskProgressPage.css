@@ -1,0 +1,48 @@
+/* filepath: /Users/xshsama/code/LearningTracker/frontend/src/styles/TaskProgressPage.css */
+.task-progress-container {
+  padding: 24px;
+}
+
+.task-row {
+  margin-top: 16px;
+}
+
+.step-container {
+  margin-top: 8px;
+}
+
+.step-list {
+  margin-left: 16px;
+}
+
+.todo-item-container {
+  margin-left: 16px;
+  margin-top: 4px;
+}
+
+.todo-progress {
+  margin-bottom: 8px;
+  max-width: 120px;
+}
+
+.circle-list {
+  list-style-type: circle;
+}
+
+.tag-margin {
+  margin-left: 8px;
+}
+
+.task-stat-container {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+}
+
+.text-centered {
+  text-align: center;
+}
+
+.todo-section {
+  margin-top: 24px;
+}

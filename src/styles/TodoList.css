@@ -1,0 +1,52 @@
+/* filepath: /Users/xshsama/code/LearningTracker/frontend/src/styles/TodoList.css */
+.todo-step-container {
+  margin-bottom: 16px;
+}
+
+.todo-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.todo-empty-text {
+  display: block;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.priority-2 {
+  color: #f5222d;
+  font-weight: bold;
+}
+
+.priority-1 {
+  color: #fa8c16;
+}
+
+.priority-0 {
+  color: inherit;
+}
+
+.task-tag {
+  margin-left: 8px;
+}
+
+.todo-item {
+  margin-bottom: 4px;
+}
+
+.todo-items-list {
+  padding-left: 16px;
+  margin-top: 8px;
+}
+
+.todo-item-actions {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}

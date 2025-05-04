@@ -19,12 +19,63 @@ export interface BaseTask {
     priority?: 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
+export interface StepTaskDetailDTO {
+    completedSteps: number
+    blockedSteps: number
+    steps?: StepDTO[]
+}
+
+export interface StepDTO {
+    id: string
+    title: string
+    description?: string
+    status: 'PENDING' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE'
+    order?: number
+    validationScore?: number
+    asTodoList?: boolean
+    todoItems?: TodoItem[]
+}
+
 export interface StepTask extends BaseTask {
     type: 'STEP'
     completedSteps: number
     blockedSteps: number
     validationScore?: number
     stepsJson?: string
+    steps?: Step[]
+    stepTaskDetail?: StepTaskDetailDTO // 添加后端返回的详情字段
+}
+
+export interface Step {
+    id: string
+    title: string
+    order?: number
+    dependencies?: string[]
+    status: 'PENDING' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE'
+    completionRules?: CompletionRule
+    completed?: boolean
+    asTodoList?: boolean
+    todoItems?: TodoItem[]
+    description?: string
+    estimatedDuration?: number
+}
+
+export interface TodoItem {
+    id: string
+    content: string
+    completed: boolean
+    createdAt?: Date
+    completedAt?: Date
+    priority?: number // 0-低，1-中，2-高
+    notes?: string
+}
+
+export interface CompletionRule {
+    type: 'MANUAL' | 'AUTO_CHECK' | 'FILE_UPLOAD'
+    criteria?: {
+        minDuration?: number
+        requiredFiles?: string[]
+    }
 }
 
 export interface HabitTask extends BaseTask {

@@ -1,6 +1,7 @@
-import { PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import {
   Button,
+  Checkbox,
   Form,
   Input,
   InputNumber,
@@ -14,6 +15,7 @@ import dayjs from 'dayjs'
 import React, { useEffect, useState } from 'react'
 import { createTag, getTags } from '../../services/objectiveService'
 import { setTaskTags } from '../../services/taskTagService'
+import '../../styles/TaskForm.css'
 import { Goal, Tag as TagFromGoals } from '../../types/goals'
 import { CreateTaskRequest, Task } from '../../types/task'
 
@@ -46,7 +48,44 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const inputRef = React.useRef<InputRef>(null)
   const [newlyCreatedTags, setNewlyCreatedTags] = useState<TagType[]>([])
   const [allTags, setAllTags] = useState<TagType[]>([...availableTags])
+  // 添加任务类型状态，用于动态显示表单字段
+  const [taskType, setTaskType] = useState<string>(
+    initialValues?.type || 'STEP',
+  )
 
+  // 添加表单值改变的处理函数
+  useEffect(() => {
+    // 确保初始值被正确设置
+    setTaskType(form.getFieldValue('type') || initialValues?.type || 'STEP')
+  }, [form, initialValues])
+
+  // 处理表单值变化
+  const handleValuesChange = (changedValues: any) => {
+    // 如果任务类型发生变化
+    if (changedValues.type) {
+      setTaskType(changedValues.type)
+
+      // 如果切换到HABIT类型，默认设置频率为DAILY
+      if (changedValues.type === 'HABIT' && !form.getFieldValue('frequency')) {
+        form.setFieldsValue({ frequency: 'DAILY' })
+      }
+      // 如果切换到CREATIVE类型，设置默认许可证
+      if (
+        changedValues.type === 'CREATIVE' &&
+        !form.getFieldValue('licenseType')
+      ) {
+        form.setFieldsValue({ licenseType: 'ALL_RIGHTS_RESERVED' })
+      }
+    }
+
+    // 如果频率变了，并且是HABIT类型
+    if (changedValues.frequency && taskType === 'HABIT') {
+      // 强制组件重新渲染
+      setTaskType((prev) => `${prev}_${Date.now()}`)
+    }
+  }
+
+  // 添加标签获取功能
   useEffect(() => {
     const fetchTags = async () => {
       try {
@@ -143,7 +182,57 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
     // 根据任务类型添加特定字段
     if (values.type === 'STEP') {
-      formattedValues.stepsJson = values.stepsJson || '[]'
+      // 将steps数组转换为JSON字符串
+      if (values.steps && Array.isArray(values.steps)) {
+        // 为每个步骤处理数据
+        const stepsWithIds = values.steps.map(
+          (
+            step: {
+              id?: string
+              title: string
+              description?: string
+              asTodoList?: boolean
+              todoItems?: Array<{
+                id?: string
+                content: string
+                priority?: number
+                completed?: boolean
+              }>
+            },
+            index: number,
+          ) => {
+            // 为每个待办事项生成唯一ID
+            const todoItems =
+              step.todoItems && Array.isArray(step.todoItems)
+                ? step.todoItems.map((item, todoIndex) => ({
+                    id: item.id || `todo-${Date.now()}-${index}-${todoIndex}`,
+                    content: item.content,
+                    priority: item.priority ?? 0,
+                    completed: item.completed ?? false,
+                    createdAt: new Date().toISOString(),
+                  }))
+                : []
+
+            return {
+              id: step.id || `step-${Date.now()}-${index}`,
+              title: step.title,
+              description: step.description || '',
+              order: index,
+              status: 'PENDING' as
+                | 'PENDING'
+                | 'IN_PROGRESS'
+                | 'BLOCKED'
+                | 'DONE',
+              asTodoList:
+                step.asTodoList === undefined ? true : step.asTodoList,
+              todoItems: todoItems,
+            }
+          },
+        )
+        formattedValues.stepsJson = JSON.stringify(stepsWithIds)
+      } else {
+        formattedValues.stepsJson = '[]'
+      }
     } else if (values.type === 'HABIT') {
       formattedValues.frequency = values.frequency
       formattedValues.daysOfWeekJson = values.daysOfWeekJson
@@ -169,6 +258,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       form={form}
       layout="vertical"
       onFinish={handleFormFinish}
+      onValuesChange={handleValuesChange}
       initialValues={{
         ...initialValues,
         completionDate: initialValues?.completionDate
@@ -230,7 +320,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
         <InputNumber
           min={1}
           max={10}
-          style={{ width: '100%' }}
+          className="full-width-input"
         />
       </Form.Item>
 
@@ -251,7 +341,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
         name="type"
         rules={[{ required: true, message: '请选择任务类型' }]}
       >
-        <Select placeholder="选择任务类型">
+        <Select
+          placeholder="选择任务类型"
+          onChange={(value) => {
+            // 当任务类型变化时，强制表单重新渲染
+            form.setFieldsValue({ type: value })
+            // 如果是HABIT类型，默认设置频率为DAILY
+            if (value === 'HABIT' && !form.getFieldValue('frequency')) {
+              form.setFieldsValue({ frequency: 'DAILY' })
+            }
+            // 如果是CREATIVE类型，设置默认许可证
+            if (value === 'CREATIVE' && !form.getFieldValue('licenseType')) {
+              form.setFieldsValue({ licenseType: 'ALL_RIGHTS_RESERVED' })
+            }
+          }}
+        >
           <Select.Option value="STEP">步骤类</Select.Option>
           <Select.Option value="HABIT">习惯性</Select.Option>
           <Select.Option value="CREATIVE">创作型</Select.Option>
@@ -259,32 +363,211 @@ const TaskForm: React.FC<TaskFormProps> = ({
       </Form.Item>
 
       {/* 根据任务类型显示特定字段 */}
-      {form.getFieldValue('type') === 'STEP' && (
+      {taskType === 'STEP' && (
         <Form.Item
           label="步骤设置"
-          name="stepsJson"
-          tooltip="请输入任务步骤的JSON格式数据"
+          tooltip="添加完成任务所需的步骤"
         >
-          <Input.TextArea
-            placeholder='例如: [{"id":"1","title":"第一步","description":"描述..."}]'
-            rows={4}
-          />
+          <Form.List
+            name="steps"
+            initialValue={[
+              { title: '', description: '', asTodoList: true, todoItems: [] },
+            ]}
+          >
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name, ...restField }) => (
+                  <div
+                    key={key}
+                    className="step-item"
+                  >
+                    <div className="step-header">
+                      <span className="step-number">步骤 {name + 1}</span>
+                      {fields.length > 1 && (
+                        <Button
+                          type="text"
+                          danger
+                          onClick={() => remove(name)}
+                          icon={<DeleteOutlined />}
+                        />
+                      )}
+                    </div>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'title']}
+                      rules={[{ required: true, message: '请输入步骤标题' }]}
+                    >
+                      <Input placeholder="步骤标题" />
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'description']}
+                    >
+                      <Input.TextArea
+                        placeholder="步骤描述（可选）"
+                        rows={2}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'asTodoList']}
+                      valuePropName="checked"
+                      initialValue={true}
+                    >
+                      <Checkbox>设为待办事项列表</Checkbox>
+                    </Form.Item>
+
+                    {/* 当设置为待办事项列表时，显示添加待办项的表单 */}
+                    <Form.Item
+                      noStyle
+                      shouldUpdate={(prevValues, currentValues) => {
+                        return (
+                          prevValues.steps?.[name]?.asTodoList !==
+                          currentValues.steps?.[name]?.asTodoList
+                        )
+                      }}
+                    >
+                      {({ getFieldValue }) => {
+                        const asTodoList = getFieldValue([
+                          'steps',
+                          name,
+                          'asTodoList',
+                        ])
+                        return asTodoList ? (
+                          <div className="todo-items-container">
+                            <Form.List
+                              name={[name, 'todoItems']}
+                              initialValue={[]}
+                            >
+                              {(
+                                todoFields,
+                                { add: addTodo, remove: removeTodo },
+                              ) => (
+                                <>
+                                  {todoFields.map(
+                                    ({
+                                      key: todoKey,
+                                      name: todoName,
+                                      ...todoRestField
+                                    }) => (
+                                      <div
+                                        key={todoKey}
+                                        className="todo-item"
+                                      >
+                                        <Form.Item
+                                          {...todoRestField}
+                                          name={[todoName, 'content']}
+                                          rules={[
+                                            {
+                                              required: true,
+                                              message: '请输入待办内容',
+                                            },
+                                          ]}
+                                          style={{ flex: 1, marginBottom: 8 }}
+                                        >
+                                          <Input placeholder="待办事项内容" />
+                                        </Form.Item>
+                                        <Form.Item
+                                          {...todoRestField}
+                                          name={[todoName, 'priority']}
+                                          initialValue={0}
+                                          style={{
+                                            width: 120,
+                                            marginLeft: 8,
+                                            marginBottom: 8,
+                                          }}
+                                        >
+                                          <Select placeholder="优先级">
+                                            <Select.Option value={0}>
+                                              低
+                                            </Select.Option>
+                                            <Select.Option value={1}>
+                                              中
+                                            </Select.Option>
+                                            <Select.Option value={2}>
+                                              高
+                                            </Select.Option>
+                                          </Select>
+                                        </Form.Item>
+                                        <Button
+                                          type="text"
+                                          danger
+                                          onClick={() => removeTodo(todoName)}
+                                          icon={<DeleteOutlined />}
+                                          style={{ marginLeft: 8 }}
+                                        />
+                                      </div>
+                                    ),
+                                  )}
+                                  <Button
+                                    type="dashed"
+                                    onClick={() =>
+                                      addTodo({
+                                        content: '',
+                                        completed: false,
+                                        priority: 0,
+                                      })
+                                    }
+                                    icon={<PlusOutlined />}
+                                    style={{ marginBottom: 16 }}
+                                  >
+                                    添加待办事项
+                                  </Button>
+                                </>
+                              )}
+                            </Form.List>
+                          </div>
+                        ) : null
+                      }}
+                    </Form.Item>
+                  </div>
+                ))}
+                <Form.Item>
+                  <Button
+                    type="dashed"
+                    onClick={() =>
+                      add({
+                        title: '',
+                        description: '',
+                        asTodoList: true,
+                        todoItems: [],
+                      })
+                    }
+                    block
+                    icon={<PlusOutlined />}
+                  >
+                    添加步骤
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+          </Form.List>
         </Form.Item>
       )}
 
-      {form.getFieldValue('type') === 'HABIT' && (
+      {taskType === 'HABIT' && (
         <>
           <Form.Item
             label="频率"
             name="frequency"
             rules={[
               {
-                required: form.getFieldValue('type') === 'HABIT',
+                required: taskType === 'HABIT',
                 message: '请选择频率',
               },
             ]}
           >
-            <Select placeholder="选择习惯频率">
+            <Select
+              placeholder="选择习惯频率"
+              onChange={() => {
+                // 强制重新渲染
+                setTaskType((prev) =>
+                  typeof prev === 'string' && !prev.includes('_')
+                    ? `${prev}_${Date.now()}`
+                    : prev.split('_')[0] + `_${Date.now()}`,
+                )
+              }}
+            >
               <Select.Option value="DAILY">每日</Select.Option>
               <Select.Option value="WEEKLY">每周</Select.Option>
               <Select.Option value="MONTHLY">每月</Select.Option>
@@ -331,7 +614,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
         </>
       )}
 
-      {form.getFieldValue('type') === 'CREATIVE' && (
+      {taskType === 'CREATIVE' && (
         <>
           <Form.Item
             label="发布格式"

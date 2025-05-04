@@ -1,0 +1,101 @@
+/* 步骤和待办清单样式 */
+.task-steps {
+  margin-top: 8px;
+}
+
+.steps-list {
+  margin-left: 16px;
+  padding-left: 0;
+}
+
+.todo-tag {
+  margin-left: 8px;
+}
+
+.todo-items-container {
+  margin-left: 16px;
+  margin-top: 4px;
+}
+
+.todo-progress {
+  margin-bottom: 8px;
+  max-width: 120px;
+}
+
+.todo-items-list {
+  list-style-type: circle;
+  padding-left: 16px;
+}
+
+.todo-item {
+  margin-bottom: 2px;
+}
+
+.priority-2 {
+  color: #f5222d; /* 高优先级 - 红色 */
+}
+
+.priority-1 {
+  color: #fa8c16; /* 中优先级 - 橙色 */
+}
+
+.priority-0 {
+  /* 低优先级 - 默认颜色 */
+}
+
+.step-title {
+  display: flex;
+  align-items: center;
+}
+
+.todo-item-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.todo-item-notes {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+
+/* 步骤控制按钮样式 */
+.step-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.step-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.step-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.step-action-button {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.step-action-button:hover {
+  opacity: 1;
+}
+
+.step-completed {
+  text-decoration: line-through;
+  color: #8c8c8c;
+}
+
+.todo-empty-text {
+  display: block;
+  font-style: italic;
+  margin: 8px 0;
+}
