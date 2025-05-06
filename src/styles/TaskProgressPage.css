@@ -1,48 +1,94 @@
-/* filepath: /Users/xshsama/code/LearningTracker/frontend/src/styles/TaskProgressPage.css */
 .task-progress-container {
-  padding: 24px;
-}
-
-.task-row {
-  margin-top: 16px;
-}
-
-.step-container {
-  margin-top: 8px;
-}
-
-.step-list {
-  margin-left: 16px;
-}
-
-.todo-item-container {
-  margin-left: 16px;
-  margin-top: 4px;
-}
-
-.todo-progress {
-  margin-bottom: 8px;
-  max-width: 120px;
-}
-
-.circle-list {
-  list-style-type: circle;
-}
-
-.tag-margin {
-  margin-left: 8px;
-}
-
-.task-stat-container {
   display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
 }
 
-.text-centered {
-  text-align: center;
+.task-card {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  transition: box-shadow 0.3s;
 }
 
-.todo-section {
-  margin-top: 24px;
+.task-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.task-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.task-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.task-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-completed {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.status-pending {
+  background-color: #fff7e6;
+  color: #fa8c16;
+}
+
+.task-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.task-description {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.task-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.task-btn {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-complete {
+  background-color: #52c41a;
+  color: white;
+}
+
+.btn-edit {
+  background-color: #1890ff;
+  color: white;
+}
+
+.btn-delete {
+  background-color: #f5222d;
+  color: white;
 }

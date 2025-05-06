@@ -1,52 +1,142 @@
-/* filepath: /Users/xshsama/code/LearningTracker/frontend/src/styles/TodoList.css */
-.todo-step-container {
-  margin-bottom: 16px;
-}
-
-.todo-step-header {
+.todo-container {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.todo-empty-text {
-  display: block;
-  padding: 8px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  margin-top: 8px;
-  text-align: center;
-}
-
-.priority-2 {
-  color: #f5222d;
-  font-weight: bold;
-}
-
-.priority-1 {
-  color: #fa8c16;
-}
-
-.priority-0 {
-  color: inherit;
-}
-
-.task-tag {
-  margin-left: 8px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
 }
 
 .todo-item {
-  margin-bottom: 4px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  transition: all 0.3s;
 }
 
-.todo-items-list {
-  padding-left: 16px;
-  margin-top: 8px;
+.todo-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.todo-item-actions {
+.todo-header {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.todo-title-row { /* 添加新的样式规则 */
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.todo-status-dot { /* 添加新的样式规则 */
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* 为不同的任务状态定义颜色 */
+.status-active {
+  background-color: #1890ff; /* 蓝色 */
+}
+
+.status-completed {
+  background-color: #52c41a; /* 绿色 */
+}
+
+.status-in_progress {
+  background-color: #faad14; /* 黄色 */
+}
+
+.status-paused {
+  background-color: #f5222d; /* 红色 */
+}
+
+.status-blocked {
+  background-color: #bfbfbf; /* 灰色 */
+}
+
+.status-not_started {
+  background-color: #d9d9d9; /* 浅灰色 */
+}
+
+.status-archived {
+  background-color: #000; /* 黑色 */
+}
+
+.status-overdue {
+  background-color: #ff4d4f; /* 亮红色 */
+}
+
+
+.todo-title {
+  font-size: 18px; /* 稍微增大字体 */
   margin-left: 8px;
+  color: #333; /* 使用深色突出未完成状态 */
+}
+
+.todo-completed-icon {
+  color: #52c41a;
+  font-size: 16px;
+}
+
+.todo-description {
+  margin-top: 8px;
+  margin-left: 24px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* 步骤容器样式 */
+.steps-container {
+  margin-top: 12px;
+  padding-left: 12px;
+  border-left: 2px solid #f0f0f0;
+}
+
+.step-item {
+  border-radius: 4px;
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  transition: background-color 0.3s;
+}
+
+.step-item:hover {
+  background-color: #f9f9f9;
+}
+
+.step-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.step-completed {
+  color: #8c8c8c;
+  text-decoration: line-through;
+  font-size: 14px; /* 为步骤标题设置字体大小 */
+}
+
+.step-row Text { /* 为未完成的步骤标题设置字体大小和颜色 */
+  font-size: 14px;
+  color: #333;
+}
+
+.step-description {
+  padding-left: 16px;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.step-action-button {
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.step-action-button:hover {
+  opacity: 1;
 }

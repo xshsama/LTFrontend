@@ -1,166 +1,192 @@
-import { PlusOutlined } from '@ant-design/icons'
-import {
-  Tag as AntTag,
-  Button,
-  Checkbox,
-  Collapse,
-  List,
-  Typography,
-} from 'antd'
+import { CheckCircleOutlined } from '@ant-design/icons'
+import { Button, List, Typography, message } from 'antd'
 import React from 'react'
+import { updateStepStatus, updateTaskStatus } from '../services/taskService'
 import '../styles/TodoList.css'
-import { StepTask, Task, TodoItem } from '../types/task'
+import { Step, StepTask } from '../types/task'
 
 const { Text } = Typography
-const { Panel } = Collapse
 
 interface TodoListProps {
-  tasks: Task[]
+  tasks: any[] // 接受tasks属性以兼容ProgressTracker的用法
 }
 
 const TodoList: React.FC<TodoListProps> = ({ tasks }) => {
-  // 过滤出包含待办事项的任务或者标记为待办事项列表的步骤
-  const tasksWithTodos = tasks.filter((task) => {
-    if (task.type === 'STEP' && (task as StepTask).steps) {
-      return (task as StepTask).steps!.some(
-        (step) => step.asTodoList, // 只要标记为待办事项列表就显示，不再检查todoItems是否存在或有内容
-      )
-    }
-    return false
-  })
-
-  if (tasksWithTodos.length === 0) {
-    return <Text type="secondary">暂无待办事项</Text>
-  }
-
-  return (
-    <Collapse
-      defaultActiveKey={tasksWithTodos.map((task) => task.id.toString())}
-    >
-      {tasksWithTodos.map((task) => (
-        <Panel
-          header={
-            <div>
-              <Text strong>{task.title}</Text>
-              <AntTag
-                color={task.status === 'COMPLETED' ? 'success' : 'processing'}
-                className="task-tag"
-              >
-                {task.status === 'COMPLETED' ? '已完成' : '进行中'}
-              </AntTag>
-            </div>
-          }
-          key={task.id.toString()}
-        >
-          {task.type === 'STEP' && (task as StepTask).steps && (
-            <>
-              {(task as StepTask)
-                .steps!.filter(
-                  (step) => step.asTodoList, // 只要标记为待办事项列表就显示
-                )
-                .map((step) => (
-                  <div
-                    key={step.id}
-                    className="todo-step-container"
-                  >
-                    <div className="todo-step-header">
-                      <Text strong>{step.title}</Text>
-                      <Button
-                        size="small"
-                        icon={<PlusOutlined />}
-                        type="primary"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // 这里可以添加一个弹窗来添加新的待办事项
-                          // 简单起见，这里只显示一个消息
-                          // 实际应用中可以添加一个Modal或者使用更复杂的状态管理
-                          alert('此功能需要在任务详情中添加')
-                        }}
-                      >
-                        添加
-                      </Button>
-                    </div>
-                    {step.todoItems && step.todoItems.length > 0 ? (
-                      <TodoItemsList todoItems={step.todoItems} />
-                    ) : (
-                      <Text
-                        type="secondary"
-                        className="todo-empty-text"
-                      >
-                        暂无待办项，请添加
-                      </Text>
-                    )}
-                  </div>
-                ))}
-            </>
-          )}
-        </Panel>
-      ))}
-    </Collapse>
-  )
-}
-
-interface TodoItemsListProps {
-  todoItems: TodoItem[]
-  onToggleComplete?: (item: TodoItem) => void
-}
-
-const TodoItemsList: React.FC<TodoItemsListProps> = ({
-  todoItems,
-  onToggleComplete,
-}) => {
-  // 切换待办事项完成状态
-  const handleToggleComplete = (item: TodoItem) => {
-    if (onToggleComplete) {
-      onToggleComplete(item)
+  const refreshData = () => {
+    // 触发父组件的刷新方法，或者重新获取数据
+    // 假设父组件通过 props 传递了一个名为 onTaskUpdate 的函数来处理数据刷新
+    // 如果父组件没有提供这样的函数，需要根据实际情况调整
+    if (typeof (tasks as any).onTaskUpdate === 'function') {
+      ;(tasks as any).onTaskUpdate()
     } else {
-      // 默认本地状态切换实现
-      item.completed = !item.completed
-      if (item.completed) {
-        item.completedAt = new Date()
-      } else {
-        item.completedAt = undefined
-      }
+      console.log('Refreshing data...')
+      // 这里可以添加重新获取数据的逻辑，例如调用 API
     }
   }
 
+  // 处理步骤状态更改
+  const handleStepStatusChange = async (
+    taskId: number,
+    stepId: string,
+    completed: boolean,
+  ) => {
+    try {
+      message.loading('正在更新步骤状态...', 0)
+      await updateStepStatus(taskId, stepId, completed ? 'PENDING' : 'DONE')
+      message.destroy()
+      message.success(completed ? '步骤已标记为未完成' : '步骤已标记为完成')
+
+      // 检查当前任务的所有步骤是否都已完成
+      // 重新获取最新的任务数据，确保步骤状态是最新的
+      // 这里假设 updateStepStatus 返回更新后的任务数据
+      const updatedTask = await updateStepStatus(
+        taskId,
+        stepId,
+        completed ? 'PENDING' : 'DONE',
+      )
+
+      if (updatedTask && updatedTask.steps) {
+        const allStepsCompleted = updatedTask.steps.every(
+          (step) => step.status === 'DONE',
+        )
+        if (allStepsCompleted && updatedTask.status !== 'COMPLETED') {
+          // 如果所有步骤都已完成且任务状态不是 COMPLETED，更新任务状态为 COMPLETED
+          message.loading('所有步骤已完成，正在更新任务状态...', 0)
+          try {
+            // 调用后端接口更新任务状态
+            await updateTaskStatus(taskId, 'COMPLETED')
+            message.destroy()
+            message.success('任务已标记为完成')
+          } catch (taskUpdateError) {
+            message.destroy()
+            message.error('更新任务状态失败，请重试')
+            console.error('更新任务状态失败:', taskUpdateError)
+          }
+        }
+      }
+
+      refreshData()
+    } catch (error) {
+      message.destroy()
+      message.error('更新步骤状态失败，请重试')
+      console.error('更新步骤状态失败:', error)
+    }
+  }
+
+  // 如果没有任务或任务数组为空，显示暂无任务的提示
+  if (!tasks || tasks.length === 0) {
+    return (
+      <div className="todo-container">
+        <Text type="secondary">暂无任务</Text>
+      </div>
+    )
+  }
+
+  // 筛选出步骤型任务
+  const stepTasks = tasks.filter((task) => task.type === 'STEP') as StepTask[]
+
+  if (stepTasks.length === 0) {
+    return (
+      <div className="todo-container">
+        <Text type="secondary">暂无步骤型任务</Text>
+      </div>
+    )
+  }
+
   return (
-    <List
-      size="small"
-      dataSource={todoItems}
-      renderItem={(item) => (
-        <List.Item
-          actions={[
-            <Button
-              type="text"
-              size="small"
-              onClick={() => handleToggleComplete(item)}
-            >
-              {item.completed ? '取消完成' : '完成'}
-            </Button>,
-          ]}
-        >
-          <Checkbox
-            checked={item.completed}
-            disabled
+    <div className="todo-container">
+      <List
+        itemLayout="vertical"
+        dataSource={stepTasks}
+        renderItem={(task) => (
+          <List.Item
+            key={task.id}
+            className="todo-item"
           >
-            <Text
-              delete={item.completed}
-              type={item.completed ? 'secondary' : undefined}
-              className={
-                item.priority === 2
-                  ? 'priority-high'
-                  : item.priority === 1
-                  ? 'priority-medium'
-                  : ''
-              }
-            >
-              {item.content}
-            </Text>
-          </Checkbox>
-        </List.Item>
-      )}
-    />
+            <div className="todo-header">
+              <Text
+                delete={task.status === 'COMPLETED'}
+                className="todo-title"
+              ></Text>
+            </div>
+            <div className="todo-title-row">
+              <span
+                className={`todo-status-dot status-${task.status.toLowerCase()}`}
+              ></span>
+              <Text
+                delete={task.status === 'COMPLETED'}
+                className="todo-title"
+              >
+                {task.title}
+              </Text>
+              {task.status === 'COMPLETED' && (
+                <CheckCircleOutlined className="todo-completed-icon" />
+              )}
+            </div>
+
+            {/* 显示步骤列表 */}
+            {task.steps && task.steps.length > 0 && (
+              <div className="steps-container">
+                <Text
+                  strong
+                  style={{ marginTop: 16, marginBottom: 8, display: 'block' }}
+                >
+                  步骤:
+                </Text>
+                <List
+                  size="small"
+                  dataSource={task.steps}
+                  renderItem={(step: Step) => (
+                    <List.Item
+                      key={step.id}
+                      className="step-item"
+                    >
+                      <div className="step-row">
+                        <Text
+                          delete={step.completed || step.status === 'DONE'}
+                          className={
+                            step.completed || step.status === 'DONE'
+                              ? 'step-completed'
+                              : ''
+                          }
+                        >
+                          {step.title}
+                        </Text>
+
+                        {/* 完成/取消完成按钮 */}
+                        {step.completed || step.status === 'DONE' ? (
+                          <div>✅</div>
+                        ) : (
+                          <Button
+                            type="primary"
+                            size="small"
+                            className="step-action-button"
+                            icon={<CheckCircleOutlined />}
+                            onClick={() =>
+                              handleStepStatusChange(task.id, step.id, false)
+                            }
+                          >
+                            完成
+                          </Button>
+                        )}
+                      </div>
+                      {step.description && (
+                        <Text
+                          type="secondary"
+                          className="step-description"
+                        >
+                          {step.description}
+                        </Text>
+                      )}
+                    </List.Item>
+                  )}
+                />
+              </div>
+            )}
+          </List.Item>
+        )}
+      />
+    </div>
   )
 }
 

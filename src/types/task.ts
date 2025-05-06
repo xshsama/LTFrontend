@@ -54,6 +54,7 @@ export interface Step {
     status: 'PENDING' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE'
     completionRules?: CompletionRule
     completed?: boolean
+    completedAt?: Date
     asTodoList?: boolean
     todoItems?: TodoItem[]
     description?: string

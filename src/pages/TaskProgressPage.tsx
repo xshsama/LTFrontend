@@ -2,7 +2,6 @@ import {
   CheckCircleOutlined,
   LoginOutlined,
   ReloadOutlined,
-  UndoOutlined,
 } from '@ant-design/icons'
 import {
   Badge,
@@ -640,40 +639,7 @@ const TaskProgressPage: React.FC = () => {
                                           {/* 完成/取消完成按钮 */}
                                           <div className="step-action-buttons">
                                             {step.completed ||
-                                            step.status === 'DONE' ? (
-                                              <Button
-                                                type="text"
-                                                size="small"
-                                                className="step-action-button"
-                                                icon={<UndoOutlined />}
-                                                onClick={async () => {
-                                                  try {
-                                                    message.loading(
-                                                      '正在更新步骤状态...',
-                                                      0,
-                                                    )
-                                                    await updateStepStatus(
-                                                      task.id,
-                                                      step.id,
-                                                      'PENDING',
-                                                    )
-                                                    message.destroy()
-                                                    message.success(
-                                                      '步骤已标记为未完成',
-                                                    )
-                                                    // 刷新数据
-                                                    refreshData()
-                                                  } catch (error) {
-                                                    message.destroy()
-                                                    message.error(
-                                                      '更新步骤状态失败，请重试',
-                                                    )
-                                                  }
-                                                }}
-                                              >
-                                                取消完成
-                                              </Button>
-                                            ) : (
+                                            step.status === 'DONE' ? null : ( // If step is DONE, render nothing (removed "取消完成" button)
                                               <Button
                                                 type="primary"
                                                 size="small"

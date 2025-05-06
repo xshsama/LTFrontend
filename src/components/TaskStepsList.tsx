@@ -37,6 +37,7 @@ const StepItem: React.FC<StepItemProps> = ({ step }) => {
           {step.description}
         </Text>
       )}
+      <button className="complete-btn">完成</button>
     </div>
   )
 }
