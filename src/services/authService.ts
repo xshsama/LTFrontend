@@ -16,6 +16,7 @@ export interface RegisterRequest {
 
 // 用户信息接口
 export interface UserInfo {
+    id: number; // Add user ID field
     username: string;
     nickname?: string;
     avatar?: string;

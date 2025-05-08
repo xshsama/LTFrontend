@@ -32,8 +32,6 @@ export interface StepDTO {
     status: 'PENDING' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE'
     order?: number
     validationScore?: number
-    asTodoList?: boolean
-    todoItems?: TodoItem[]
 }
 
 export interface StepTask extends BaseTask {
@@ -55,20 +53,8 @@ export interface Step {
     completionRules?: CompletionRule
     completed?: boolean
     completedAt?: Date
-    asTodoList?: boolean
-    todoItems?: TodoItem[]
     description?: string
     estimatedDuration?: number
-}
-
-export interface TodoItem {
-    id: string
-    content: string
-    completed: boolean
-    createdAt?: Date
-    completedAt?: Date
-    priority?: number // 0-低，1-中，2-高
-    notes?: string
 }
 
 export interface CompletionRule {

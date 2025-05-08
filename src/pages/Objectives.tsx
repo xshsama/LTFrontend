@@ -1,6 +1,15 @@
 import { LoginOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Modal, Result, Space, Tabs, Typography, message } from 'antd'
-import React, { useEffect, useState } from 'react'
+import {
+  Button,
+  message,
+  Modal,
+  Result,
+  Space,
+  Tabs,
+  // TagType, // Removed incorrect import from antd
+  Typography,
+} from 'antd'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GoalForm from '../components/forms/GoalForm'
 import TaskForm from '../components/forms/TaskForm'
@@ -18,20 +27,22 @@ import {
   createTask,
   getAllTasks,
   getTasksByGoal,
+  getTaskTags, // Import getTaskTags
 } from '../services/taskService'
 import {
   Achievement,
   Category,
   Goal,
+  Tag as GoalTagType,
   Subject,
-  Tag as TagType,
-} from '../types/goals'
+} from '../types/goals' // Aliased Tag from goals.ts
+import { Tag as TaskTagType } from '../types/tag' // Imported Tag from tag.ts
 import { CreateTaskRequest, Task } from '../types/task'
 
 const { Title } = Typography
 
 const ObjectivesPage: React.FC = () => {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth() // Assuming 'user' object with 'id' is available from useAuth
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [goals, setGoals] = useState<Goal[]>([])
@@ -41,7 +52,7 @@ const ObjectivesPage: React.FC = () => {
   // 添加学科和分类的状态管理
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [availableTags, setAvailableTags] = useState<TagType[]>([])
+  const [availableTags, setAvailableTags] = useState<GoalTagType[]>([]) // Use GoalTagType
 
   // 模态框状态
   const [goalModalVisible, setGoalModalVisible] = useState(false)
@@ -78,10 +89,79 @@ const ObjectivesPage: React.FC = () => {
   // 获取所有目标
   useEffect(() => {
     const fetchGoals = async () => {
+      // 检查是否已登录
+      if (!isAuthenticated) {
+        console.log('用户未登录，跳过获取目标数据')
+        return
+      }
+
       setLoading(true)
       try {
+        // 检查Token是否存在
+        const token = localStorage.getItem('authToken')
+        if (!token) {
+          console.warn('未找到认证令牌，无法获取目标数据')
+          // 设置一个默认的测试目标
+          const testData = [
+            {
+              id: 999999,
+              title: '测试目标 (请登录获取真实数据)',
+              status: 'NOT_STARTED',
+              priority: 'MEDIUM',
+              progress: 0,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } as Goal,
+          ]
+          setGoals(testData)
+          return
+        }
+
+        // 从API获取目标数据
         const goalsData = await getGoals()
-        setGoals(goalsData)
+
+        // 打印API返回的原始数据
+        console.log('从API获取的原始目标数据:', goalsData)
+
+        // 检查数据是否有效且是数组
+        if (!goalsData || !Array.isArray(goalsData)) {
+          console.warn('API返回的目标数据不是数组格式!', goalsData)
+          // 设置一个测试目标
+          const testData = [
+            {
+              id: 999999,
+              title: '测试目标 (API返回格式错误)',
+              status: 'NOT_STARTED',
+              priority: 'MEDIUM',
+              progress: 0,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } as Goal,
+          ]
+          setGoals(testData)
+        } else {
+          // 判断数据是否为空
+          if (goalsData.length === 0) {
+            // 如果没有数据，添加一个测试目标，确保选择框有内容显示
+            const testData = [
+              {
+                id: 999999,
+                title: '测试目标 - 请先创建学习目标',
+                status: 'NOT_STARTED',
+                priority: 'MEDIUM',
+                progress: 0,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              } as Goal,
+            ]
+            console.log('未获取到目标数据，使用测试数据:', testData)
+            setGoals(testData)
+          } else {
+            // 有数据，直接使用
+            console.log('更新目标数据:', goalsData)
+            setGoals(goalsData)
+          }
+        }
       } catch (error) {
         console.error('获取目标数据失败:', error)
         message.error('获取目标数据失败，请重试！')
@@ -100,9 +180,19 @@ const ObjectivesPage: React.FC = () => {
     const fetchAllTasks = async () => {
       setLoading(true)
       try {
-        const tasksData = await getAllTasks()
-        // 使用类型断言来处理类型不匹配问题
-        setTasks(tasksData as unknown as Task[])
+        const rawTasksData = await getAllTasks()
+        // 为每个任务获取其标签
+        const tasksWithTagsPromises = rawTasksData.map(async (task) => {
+          try {
+            const tags = await getTaskTags(task.id)
+            return { ...task, tags: tags || [] } // 如果tags为null/undefined，则设为空数组
+          } catch (tagError) {
+            console.error(`获取任务 ${task.id} 的标签失败:`, tagError)
+            return { ...task, tags: [] } // 获取标签失败也设置为空数组
+          }
+        })
+        const populatedTasks = await Promise.all(tasksWithTagsPromises)
+        setTasks(populatedTasks as unknown as Task[])
       } catch (error) {
         console.error('获取所有任务失败:', error)
         message.error('获取任务数据失败，请重试！')
@@ -125,9 +215,22 @@ const ObjectivesPage: React.FC = () => {
 
       setLoading(true)
       try {
-        const tasksData = await getTasksByGoal(selectedGoalId)
-        // 使用类型断言来处理类型不匹配问题
-        setTasks(tasksData as unknown as Task[])
+        const rawTasksData = await getTasksByGoal(selectedGoalId)
+        // 为每个任务获取其标签
+        const tasksWithTagsPromises = rawTasksData.map(async (task) => {
+          try {
+            const tags = await getTaskTags(task.id)
+            return { ...task, tags: tags || [] } // 如果tags为null/undefined，则设为空数组
+          } catch (tagError) {
+            console.error(
+              `获取任务 ${task.id} (目标 ${selectedGoalId}) 的标签失败:`,
+              tagError,
+            )
+            return { ...task, tags: [] } // 获取标签失败也设置为空数组
+          }
+        })
+        const populatedTasks = await Promise.all(tasksWithTagsPromises)
+        setTasks(populatedTasks as unknown as Task[])
       } catch (error) {
         console.error(`获取目标(ID:${selectedGoalId})的任务列表失败:`, error)
         message.error('获取任务数据失败，请重试！')
@@ -241,24 +344,46 @@ const ObjectivesPage: React.FC = () => {
     )
   }
 
-  // 模拟每个目标关联的任务标签
-  const taskTagsByGoal: Record<number, TagType[]> = {}
-  tasks.forEach((task: any) => {
-    const goalId = task.goalId
-    if (!taskTagsByGoal[goalId]) {
-      taskTagsByGoal[goalId] = []
+  // 计算每个目标下所有附属任务的标签集合（去重）
+  const goalAggregatedTaskTags = useMemo(() => {
+    const result: Record<number, GoalTagType[]> = {} // Ensure result stores GoalTagType arrays
+    if (!tasks || tasks.length === 0 || !goals || goals.length === 0) {
+      return result
     }
-    if (task.goal?.tags && task.goal.tags.length > 0) {
-      const validTags = task.goal.tags.filter(
-        (tag: any): tag is TagType =>
-          tag !== null &&
-          typeof tag === 'object' &&
-          'id' in tag &&
-          'name' in tag,
+
+    const currentUserId = user?.id || 0 // Get current user ID, fallback to 0 or handle as error
+
+    goals.forEach((goal) => {
+      const tasksForThisGoal = tasks.filter(
+        (task) => task.goalId === goal.id || task.goal?.id === goal.id,
       )
-      taskTagsByGoal[goalId] = [...taskTagsByGoal[goalId], ...validTags]
-    }
-  })
+      const allTagsForThisGoal: GoalTagType[] = [] // This list will now contain GoalTagType
+      const uniqueTagIds = new Set<number>()
+
+      tasksForThisGoal.forEach((task) => {
+        if (task.tags && task.tags.length > 0) {
+          // task.tags are TaskTagType[]
+          task.tags.forEach((tagFromTask: TaskTagType) => {
+            // Explicitly type tagFromTask
+            if (!uniqueTagIds.has(tagFromTask.id)) {
+              // Convert TaskTagType to GoalTagType
+              const goalTagVersion: GoalTagType = {
+                id: tagFromTask.id,
+                title: tagFromTask.title,
+                color: tagFromTask.color,
+                userId: currentUserId, // Assign current user's ID
+                // user: user && user.username ? { id: currentUserId, username: user.username } : undefined, // Optional: populate user object
+              }
+              allTagsForThisGoal.push(goalTagVersion) // Pushing GoalTagType
+              uniqueTagIds.add(tagFromTask.id)
+            }
+          })
+        }
+      })
+      result[goal.id] = allTagsForThisGoal
+    })
+    return result
+  }, [goals, tasks, user]) // Added user to dependency array
 
   const tabItems = [
     {
@@ -268,7 +393,7 @@ const ObjectivesPage: React.FC = () => {
         <GoalsTable
           data={goals}
           loading={loading}
-          taskTags={taskTagsByGoal}
+          taskTags={goalAggregatedTaskTags} // 使用新的聚合标签数据
           tasks={tasks as any}
           subjects={subjects}
           onRowClick={(goal) => {
@@ -362,8 +487,23 @@ const ObjectivesPage: React.FC = () => {
         destroyOnClose={true}
         maskClosable={false}
       >
+        {/* {console.log('传递给TaskForm的goals数据:', JSON.stringify(goals))} */}
         <TaskForm
-          goals={goals}
+          goals={
+            goals.length > 0
+              ? goals
+              : [
+                  {
+                    id: 888888,
+                    title: '测试目标 - 请先创建学习目标',
+                    status: 'NOT_STARTED',
+                    priority: 'MEDIUM',
+                    progress: 0,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  } as Goal,
+                ]
+          }
           availableTags={availableTags as any}
           onFinish={handleTaskFormSubmit}
           onCancel={() => setTaskModalVisible(false)}

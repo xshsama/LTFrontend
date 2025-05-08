@@ -2,7 +2,7 @@ import { PlusOutlined } from '@ant-design/icons'
 import { Button, Divider, Form, Input, message, Select } from 'antd'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import apiService from '../../services/apiService'
+import { default as apiClient } from '../../services/apiService'
 import {
   getCategories,
   getCategoryBySubject,
@@ -107,7 +107,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
 
       // 查询是否有可用的学科
       try {
-        const subjectsRes = await apiService.get('/api/subjects')
+        const subjectsRes = await apiClient.get('/api/subjects')
         if (subjectsRes.data && subjectsRes.data.length > 0) {
           subjectId = subjectsRes.data[0].id
         }
@@ -115,7 +115,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         console.error('获取学科列表失败:', error)
       }
 
-      const res = await apiService.post('/api/categories', {
+      const res = await apiClient.post('/api/categories', {
         name: newCategoryName,
         description: `分类: ${newCategoryName}`,
         subject: {

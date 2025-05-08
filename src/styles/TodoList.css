@@ -134,9 +134,22 @@
 
 .step-action-button {
   opacity: 0.8;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
 
 .step-action-button:hover {
   opacity: 1;
+}
+
+/* 撤销完成按钮样式 */
+.step-action-button.ant-btn-text {
+  color: #52c41a; /* 绿色 */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-action-button.ant-btn-text:hover {
+  color: #73d13d; /* 浅绿色 */
+  background-color: rgba(82, 196, 26, 0.1); /* 浅绿色背景 */
 }

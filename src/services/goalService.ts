@@ -4,22 +4,48 @@ import apiClient from './apiService';
 // 获取所有目标列表
 export const getGoals = async (): Promise<Goal[]> => {
     try {
-        const response = await apiClient.get('/api/goals');
+        console.log('正在请求目标列表...');
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.warn('获取目标列表失败：未找到认证令牌');
+            return []; // 返回空数组而不是抛出错误
+        }
+
+        const response = await apiClient.get('/api/goals', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        console.log('获取目标列表成功:', response.data);
         return response.data;
-    } catch (error) {
-        console.error('获取目标列表失败:', error);
-        throw error;
+    } catch (error: any) {
+        console.error('获取目标列表失败:', error.response?.status, error.response?.data || error.message);
+        // 返回空数组而不是抛出错误，避免界面崩溃
+        return [];
     }
 };
 
 // 根据学科ID获取目标列表
 export const getGoalsBySubject = async (subjectId: number): Promise<Goal[]> => {
     try {
-        const response = await apiClient.get(`/api/goals/subject/${subjectId}`);
+        console.log(`正在获取学科ID=${subjectId}的目标列表...`);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.warn(`获取学科(ID:${subjectId})的目标列表失败：未找到认证令牌`);
+            return []; // 返回空数组而不是抛出错误
+        }
+
+        const response = await apiClient.get(`/api/goals/subject/${subjectId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        console.log(`获取学科(ID:${subjectId})的目标列表成功:`, response.data);
         return response.data;
-    } catch (error) {
-        console.error(`获取学科(ID:${subjectId})的目标列表失败:`, error);
-        throw error;
+    } catch (error: any) {
+        console.error(`获取学科(ID:${subjectId})的目标列表失败:`, error.response?.status, error.response?.data || error.message);
+        // 返回空数组避免页面崩溃
+        return [];
     }
 };
 
@@ -36,11 +62,36 @@ export const createGoal = async (goalData: {
     tags?: string[];
 }): Promise<Goal> => {
     try {
-        const response = await apiClient.post('/api/goals', goalData);
+        // 验证令牌
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.error('创建目标失败: 未找到认证令牌');
+            throw new Error('未登录或认证会话已过期，请重新登录后再试');
+        }
+
+        console.log('正在发送创建目标请求:', goalData);
+        const response = await apiClient.post('/api/goals', goalData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        console.log('创建目标成功:', response.data);
         return response.data;
-    } catch (error) {
-        console.error('创建目标失败:', error);
-        throw error;
+    } catch (error: any) {
+        console.error('创建目标失败:', error.response?.status, error.response?.data || error.message);
+
+        let errorMessage = '创建目标失败';
+        // 从响应中提取更有用的错误信息
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.response?.status === 403) {
+            errorMessage = '权限不足，无法创建目标';
+        } else if (error.response?.status === 401) {
+            errorMessage = '认证已过期，请重新登录';
+        }
+
+        throw new Error(errorMessage);
     }
 };
 

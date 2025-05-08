@@ -2,6 +2,7 @@ import apiClient from './apiService';
 
 // 用户个人资料类型定义
 export interface UserProfile {
+    id: number; // Add user ID field
     username: string;
     nickname?: string;
     avatar?: string;

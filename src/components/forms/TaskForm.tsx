@@ -1,7 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import {
   Button,
-  Checkbox,
   Form,
   Input,
   InputNumber,
@@ -39,6 +38,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onCancel,
   loading = false,
 }) => {
+  // 添加调试打印
+  console.log('TaskForm received goals:', goals)
+
   const [form] = Form.useForm()
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>(
     initialValues?.tags?.map((tag) => tag.id) || [],
@@ -191,28 +193,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
               id?: string
               title: string
               description?: string
-              asTodoList?: boolean
-              todoItems?: Array<{
-                id?: string
-                content: string
-                priority?: number
-                completed?: boolean
-              }>
             },
             index: number,
           ) => {
-            // 为每个待办事项生成唯一ID
-            const todoItems =
-              step.todoItems && Array.isArray(step.todoItems)
-                ? step.todoItems.map((item, todoIndex) => ({
-                    id: item.id || `todo-${Date.now()}-${index}-${todoIndex}`,
-                    content: item.content,
-                    priority: item.priority ?? 0,
-                    completed: item.completed ?? false,
-                    createdAt: new Date().toISOString(),
-                  }))
-                : []
-
             return {
               id: step.id || `step-${Date.now()}-${index}`,
               title: step.title,
@@ -223,9 +206,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 | 'IN_PROGRESS'
                 | 'BLOCKED'
                 | 'DONE',
-              asTodoList:
-                step.asTodoList === undefined ? true : step.asTodoList,
-              todoItems: todoItems,
             }
           },
         )
@@ -292,15 +272,26 @@ const TaskForm: React.FC<TaskFormProps> = ({
         <Select
           placeholder="选择关联的学习目标"
           showSearch
+          notFoundContent={goals.length === 0 ? '暂无目标数据' : null}
         >
-          {goals.map((goal) => (
+          {/* {console.log('渲染目标选项时的goals:', JSON.stringify(goals))} */}
+          {goals && goals.length > 0 ? (
+            goals.map((goal) => (
+              <Select.Option
+                key={`goal-${goal.id}`}
+                value={goal.id}
+              >
+                {goal.title || '无标题'}
+              </Select.Option>
+            ))
+          ) : (
             <Select.Option
-              key={`goal-${goal.id}`}
-              value={goal.id}
+              value=""
+              disabled
             >
-              {goal.title}
+              暂无可选目标
             </Select.Option>
-          ))}
+          )}
         </Select>
       </Form.Item>
 
@@ -370,9 +361,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
         >
           <Form.List
             name="steps"
-            initialValue={[
-              { title: '', description: '', asTodoList: true, todoItems: [] },
-            ]}
+            initialValue={[{ title: '', description: '' }]}
           >
             {(fields, { add, remove }) => (
               <>
@@ -413,113 +402,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       name={[name, 'asTodoList']}
                       valuePropName="checked"
                       initialValue={true}
-                    >
-                      <Checkbox>设为待办事项列表</Checkbox>
-                    </Form.Item>
+                    ></Form.Item>
 
-                    {/* 当设置为待办事项列表时，显示添加待办项的表单 */}
-                    <Form.Item
-                      noStyle
-                      shouldUpdate={(prevValues, currentValues) => {
-                        return (
-                          prevValues.steps?.[name]?.asTodoList !==
-                          currentValues.steps?.[name]?.asTodoList
-                        )
-                      }}
-                    >
-                      {({ getFieldValue }) => {
-                        const asTodoList = getFieldValue([
-                          'steps',
-                          name,
-                          'asTodoList',
-                        ])
-                        return asTodoList ? (
-                          <div className="todo-items-container">
-                            <Form.List
-                              name={[name, 'todoItems']}
-                              initialValue={[]}
-                            >
-                              {(
-                                todoFields,
-                                { add: addTodo, remove: removeTodo },
-                              ) => (
-                                <>
-                                  {todoFields.map(
-                                    ({
-                                      key: todoKey,
-                                      name: todoName,
-                                      ...todoRestField
-                                    }) => (
-                                      <div
-                                        key={todoKey}
-                                        className="todo-item"
-                                      >
-                                        <Form.Item
-                                          {...todoRestField}
-                                          name={[todoName, 'content']}
-                                          rules={[
-                                            {
-                                              required: true,
-                                              message: '请输入待办内容',
-                                            },
-                                          ]}
-                                          style={{ flex: 1, marginBottom: 8 }}
-                                        >
-                                          <Input placeholder="待办事项内容" />
-                                        </Form.Item>
-                                        <Form.Item
-                                          {...todoRestField}
-                                          name={[todoName, 'priority']}
-                                          initialValue={0}
-                                          style={{
-                                            width: 120,
-                                            marginLeft: 8,
-                                            marginBottom: 8,
-                                          }}
-                                        >
-                                          <Select placeholder="优先级">
-                                            <Select.Option value={0}>
-                                              低
-                                            </Select.Option>
-                                            <Select.Option value={1}>
-                                              中
-                                            </Select.Option>
-                                            <Select.Option value={2}>
-                                              高
-                                            </Select.Option>
-                                          </Select>
-                                        </Form.Item>
-                                        <Button
-                                          type="text"
-                                          danger
-                                          onClick={() => removeTodo(todoName)}
-                                          icon={<DeleteOutlined />}
-                                          style={{ marginLeft: 8 }}
-                                        />
-                                      </div>
-                                    ),
-                                  )}
-                                  <Button
-                                    type="dashed"
-                                    onClick={() =>
-                                      addTodo({
-                                        content: '',
-                                        completed: false,
-                                        priority: 0,
-                                      })
-                                    }
-                                    icon={<PlusOutlined />}
-                                    style={{ marginBottom: 16 }}
-                                  >
-                                    添加待办事项
-                                  </Button>
-                                </>
-                              )}
-                            </Form.List>
-                          </div>
-                        ) : null
-                      }}
-                    </Form.Item>
+                    {/* 已移除与待办事项相关的表单项 */}
                   </div>
                 ))}
                 <Form.Item>
@@ -529,8 +414,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       add({
                         title: '',
                         description: '',
-                        asTodoList: true,
-                        todoItems: [],
                       })
                     }
                     block

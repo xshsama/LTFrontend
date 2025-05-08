@@ -28,6 +28,42 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   const [loading, setLoading] = React.useState(!preloadedTasks)
   const [activeTabKey, setActiveTabKey] = React.useState('1')
 
+  // 添加刷新数据方法
+  const refreshTasks = React.useCallback(async () => {
+    setLoading(true)
+    try {
+      let data: Task[] = []
+
+      // 根据选定的任务类型调用相应的API
+      switch (selectedTaskType) {
+        case 'STEP':
+          console.log('ProgressTracker: 刷新步骤型任务')
+          data = await getAllStepTasks()
+          break
+        case 'HABIT':
+          console.log('ProgressTracker: 刷新习惯型任务')
+          data = await getAllHabitTasks()
+          break
+        case 'CREATIVE':
+          console.log('ProgressTracker: 刷新创意型任务')
+          data = await getAllCreativeTasks()
+          break
+        default:
+          console.log('ProgressTracker: 刷新所有任务')
+          data = await getAllTasks()
+          break
+      }
+
+      setTasks(data)
+      message.success('数据已刷新')
+    } catch (error) {
+      console.error('ProgressTracker: 刷新任务失败', error)
+      message.error('刷新任务列表失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedTaskType])
+
   // 根据选定的任务类型决定加载哪种任务
   React.useEffect(() => {
     // 如果已经有预加载的任务，就不需要再获取
@@ -127,7 +163,10 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
           tab="步骤清单"
           key="2"
         >
-          <TodoList tasks={stepTasks} />
+          <TodoList
+            tasks={stepTasks}
+            onTaskUpdate={refreshTasks}
+          />
         </TabPane>
         <TabPane
           tab="创作计划"

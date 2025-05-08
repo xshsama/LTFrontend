@@ -55,13 +55,12 @@ export const getAllStepTasks = async (): Promise<StepTask[]> => {
                 task.steps = [];
             }
 
-            // 确保每个步骤的todoItems属性都是一个数组
+            // 确保每个步骤有必要属性
             if (task.steps && task.steps.length > 0) {
                 task.steps = task.steps.map(step => ({
                     ...step,
                     // 确保每个步骤有必需的属性
-                    status: step.status || 'PENDING',
-                    todoItems: step.todoItems || [] // 确保todoItems始终是一个数组
+                    status: step.status || 'PENDING'
                 }));
             }
 
@@ -70,8 +69,7 @@ export const getAllStepTasks = async (): Promise<StepTask[]> => {
                 task.steps = task.stepTaskDetail.steps.map(step => ({
                     ...step,
                     // 确保每个步骤有必需的属性
-                    status: step.status || 'PENDING',
-                    todoItems: step.todoItems || []
+                    status: step.status || 'PENDING'
                 }));
             }
             // 如果有stepsJson但没有解析过，尝试解析
@@ -80,10 +78,8 @@ export const getAllStepTasks = async (): Promise<StepTask[]> => {
                     const parsedSteps = JSON.parse(task.stepsJson);
                     // 确保解析结果是数组
                     if (Array.isArray(parsedSteps)) {
-                        // 对解析后的steps也确保todoItems是数组
                         task.steps = parsedSteps.map(step => ({
-                            ...step,
-                            todoItems: step.todoItems || []
+                            ...step
                         }));
                     } else {
                         console.error('解析的stepsJson不是数组格式');
@@ -124,7 +120,10 @@ export const getTasksByGoal = async (goalId: number): Promise<Task[]> => {
 // 获取单个任务详情
 export const getTaskById = async (id: number): Promise<Task> => {
     try {
-        const response = await apiClient.get(`/api/tasks/${id}`);
+        // 根据其他API路径模式调整
+        const apiPath = `/tasks/${id}`;
+        console.log(`获取任务详情，路径: ${apiPath}`);
+        const response = await apiClient.get(apiPath);
         return response.data;
     } catch (error) {
         console.error(`获取任务(ID:${id})详情失败:`, error);
@@ -195,7 +194,10 @@ export const deleteTask = async (id: number): Promise<void> => {
 // 更新任务状态
 export const updateTaskStatus = async (id: number, status: string): Promise<Task> => {
     try {
-        const response = await apiClient.put(`/api/tasks/${id}/status`, { status });
+        // 根据后端日志，调整路径格式与其他API保持一致
+        const apiPath = `/tasks/${id}/status`;
+        console.log(`发送任务状态更新请求到: ${apiPath}`);
+        const response = await apiClient.put(apiPath, { status });
         return response.data;
     } catch (error) {
         console.error('更新任务状态失败:', error);
@@ -369,23 +371,85 @@ export const getCreativeTaskById = async (id: number): Promise<CreativeTask | nu
 // 更新步骤型任务的步骤信息
 export const updateStepTaskSteps = async (id: number, steps: any[]): Promise<StepTask | null> => {
     try {
+        // 确认任务ID有效
+        if (!id || isNaN(id)) {
+            throw new Error(`无效的任务ID: ${id}`);
+        }
+
+        // 确认steps是有效数组
+        if (!Array.isArray(steps) || steps.length === 0) {
+            throw new Error('步骤数据无效或为空');
+        }
+
+        console.log(`准备更新任务ID=${id}的步骤信息，共${steps.length}个步骤`);
+
         // 将steps数组转换为JSON字符串
         const stepsJson = JSON.stringify(steps);
+        console.log(`步骤JSON(前200字符): ${stepsJson.substring(0, 200)}...`);
 
-        // 调用API更新步骤信息
-        const response = await apiClient.put(`/api/tasks/${id}/update-steps`, {
-            stepsJson
-        });
-
-        console.log('步骤更新响应:', response.data);
-
-        if (response.data && (response.data.data || response.data)) {
-            // 返回更新后的任务数据
-            return response.data.data || response.data;
+        // 检查授权令牌
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.warn('警告: 尝试更新步骤但未找到授权令牌');
         }
+
+        // 调用API更新步骤信息（添加超时设置和重试选项）
+        // 根据后端日志，请求路径应为 /api/tasks/id/update-steps
+        const apiPath = `/api/tasks/${id}/update-steps`;
+        console.log(`发送PUT请求到 ${apiPath}`);
+
+        const response = await apiClient.put(apiPath,
+            { stepsJson },
+            {
+                timeout: 10000,  // 10秒超时
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        console.log(`步骤更新响应状态: ${response.status}`);
+        console.log('步骤更新响应数据:', response.data);
+
+        if (response.data) {
+            // 返回更新后的任务数据
+            const responseData = response.data.data || response.data;
+            console.log('更新成功，返回数据:', responseData);
+            return responseData;
+        }
+        console.warn('API返回成功但没有数据');
         return null;
-    } catch (error) {
-        console.error('更新步骤型任务步骤失败:', error);
+    } catch (error: any) {
+        // 详细记录错误信息
+        console.error(`更新任务(ID=${id})步骤失败:`, error.message || '未知错误');
+
+        // 检查是否是网络错误
+        if (error.code === 'ECONNABORTED') {
+            console.error('请求超时，服务器可能无响应');
+        }
+
+        // 检查是否有HTTP错误响应
+        if (error.response) {
+            console.error(`HTTP错误状态: ${error.response.status}`);
+            console.error('错误响应数据:', error.response.data);
+
+            // 针对特定错误码给出更有用的信息
+            switch (error.response.status) {
+                case 401:
+                    console.error('认证失败，请重新登录');
+                    break;
+                case 403:
+                    console.error('权限不足，无法更新该任务的步骤');
+                    break;
+                case 404:
+                    console.error(`任务ID=${id}不存在`);
+                    break;
+                case 400:
+                    console.error('请求数据格式错误');
+                    break;
+            }
+        }
+
         throw error;
     }
 };
@@ -395,12 +459,21 @@ export const updateStepStatus = async (taskId: number, stepId: string, status: s
     try {
         console.log(`更新任务ID ${taskId} 中步骤 ${stepId} 的状态为 ${status}`);
 
+        // 确保token存在
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.error('缺少认证令牌，无法更新任务步骤');
+            throw new Error('认证令牌缺失，请重新登录');
+        }
+
         // 首先获取当前任务信息
         const task = await getStepTaskById(taskId);
         if (!task || !task.steps) {
             console.error('任务不存在或没有步骤信息');
             return null;
         }
+
+        console.log(`获取到任务详情:`, JSON.stringify(task, null, 2).substring(0, 200) + '...');
 
         // 找到对应步骤并更新其状态
         const updatedSteps = task.steps.map(step => {
@@ -414,10 +487,31 @@ export const updateStepStatus = async (taskId: number, stepId: string, status: s
             return step;
         });
 
-        // 调用API更新步骤信息
-        return await updateStepTaskSteps(taskId, updatedSteps);
-    } catch (error) {
-        console.error(`更新步骤状态失败:`, error);
+        console.log(`准备更新步骤信息: 任务ID=${taskId}, 总共${updatedSteps.length}个步骤`);
+
+        // 直接尝试更新步骤状态（不通过单独的updateStep接口）
+        try {
+            // 调用API更新步骤信息
+            const result = await updateStepTaskSteps(taskId, updatedSteps);
+            console.log('步骤状态更新成功:', result);
+            return result;
+        } catch (updateError: any) {
+            console.error(`直接更新步骤失败: ${updateError.message || '未知错误'}`);
+
+            // 如果出错信息包含403，提示权限问题
+            if (updateError.response && updateError.response.status === 403) {
+                console.error('权限被拒绝(403)，可能需要重新登录或检查账号权限');
+            }
+
+            throw updateError;
+        }
+    } catch (error: any) {
+        console.error(`更新步骤状态失败:`, error.message || error);
+        // 添加更详细的错误日志
+        if (error.response) {
+            console.error(`HTTP错误状态: ${error.response.status}`);
+            console.error(`错误响应数据:`, error.response.data);
+        }
         throw error;
     }
 };

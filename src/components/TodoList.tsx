@@ -1,23 +1,22 @@
 import { CheckCircleOutlined } from '@ant-design/icons'
 import { Button, List, Typography, message } from 'antd'
 import React from 'react'
-import { updateStepStatus, updateTaskStatus } from '../services/taskService'
+import { updateStepStatus, updateTask } from '../services/taskService'
 import '../styles/TodoList.css'
-import { Step, StepTask } from '../types/task'
+import { Step, StepTask, Task } from '../types/task'
 
 const { Text } = Typography
 
 interface TodoListProps {
   tasks: any[] // 接受tasks属性以兼容ProgressTracker的用法
+  onTaskUpdate?: () => void // 添加数据更新回调
 }
 
-const TodoList: React.FC<TodoListProps> = ({ tasks }) => {
+const TodoList: React.FC<TodoListProps> = ({ tasks, onTaskUpdate }) => {
   const refreshData = () => {
     // 触发父组件的刷新方法，或者重新获取数据
-    // 假设父组件通过 props 传递了一个名为 onTaskUpdate 的函数来处理数据刷新
-    // 如果父组件没有提供这样的函数，需要根据实际情况调整
-    if (typeof (tasks as any).onTaskUpdate === 'function') {
-      ;(tasks as any).onTaskUpdate()
+    if (onTaskUpdate) {
+      onTaskUpdate()
     } else {
       console.log('Refreshing data...')
       // 这里可以添加重新获取数据的逻辑，例如调用 API
@@ -30,46 +29,126 @@ const TodoList: React.FC<TodoListProps> = ({ tasks }) => {
     stepId: string,
     completed: boolean,
   ) => {
+    const messageKey = `step-${taskId}-${stepId}`
     try {
-      message.loading('正在更新步骤状态...', 0)
-      await updateStepStatus(taskId, stepId, completed ? 'PENDING' : 'DONE')
-      message.destroy()
-      message.success(completed ? '步骤已标记为未完成' : '步骤已标记为完成')
+      // 使用唯一的key避免消息冲突
+      message.loading({ content: '正在更新步骤状态...', key: messageKey })
 
-      // 检查当前任务的所有步骤是否都已完成
-      // 重新获取最新的任务数据，确保步骤状态是最新的
-      // 这里假设 updateStepStatus 返回更新后的任务数据
-      const updatedTask = await updateStepStatus(
+      console.log(
+        `尝试更新任务ID=${taskId} 步骤ID=${stepId} 状态为 ${
+          completed ? 'PENDING' : 'DONE'
+        }`,
+      )
+
+      // 调用API更新步骤状态
+      const updatedTaskResponse = await updateStepStatus(
         taskId,
         stepId,
         completed ? 'PENDING' : 'DONE',
       )
 
-      if (updatedTask && updatedTask.steps) {
-        const allStepsCompleted = updatedTask.steps.every(
+      // 只有成功后才销毁loading消息
+      message.success({
+        content: completed ? '步骤已标记为未完成' : '步骤已标记为完成',
+        key: messageKey,
+      })
+
+      // 检查是否所有步骤都已完成，若是则更新任务状态
+      if (updatedTaskResponse && updatedTaskResponse.steps) {
+        const allStepsCompleted = updatedTaskResponse.steps.every(
           (step) => step.status === 'DONE',
         )
-        if (allStepsCompleted && updatedTask.status !== 'COMPLETED') {
+
+        if (allStepsCompleted && updatedTaskResponse.status !== 'COMPLETED') {
+          const taskUpdateKey = `task-${taskId}`
           // 如果所有步骤都已完成且任务状态不是 COMPLETED，更新任务状态为 COMPLETED
-          message.loading('所有步骤已完成，正在更新任务状态...', 0)
+          message.loading({
+            content: '所有步骤已完成，正在更新任务状态...',
+            key: taskUpdateKey,
+          })
+
           try {
-            // 调用后端接口更新任务状态
-            await updateTaskStatus(taskId, 'COMPLETED')
-            message.destroy()
-            message.success('任务已标记为完成')
-          } catch (taskUpdateError) {
-            message.destroy()
-            message.error('更新任务状态失败，请重试')
+            // 调用后端接口更新任务状态和完成日期
+            await updateTask(taskId, {
+              status: 'COMPLETED' as Task['status'],
+              completionDate: new Date(),
+            })
+
+            message.success({
+              content: '任务已标记为完成',
+              key: taskUpdateKey,
+            })
+          } catch (taskUpdateError: any) {
             console.error('更新任务状态失败:', taskUpdateError)
+
+            // 检查是否是授权问题
+            if (
+              taskUpdateError.response &&
+              taskUpdateError.response.status === 403
+            ) {
+              message.error({
+                content: '权限不足，无法更新任务状态，请检查登录状态',
+                key: taskUpdateKey,
+                duration: 5,
+              })
+            } else {
+              message.error({
+                content: '更新任务状态失败，请重试',
+                key: taskUpdateKey,
+              })
+            }
           }
         }
       }
 
+      // 调用刷新数据函数通知父组件数据已更改
       refreshData()
-    } catch (error) {
-      message.destroy()
-      message.error('更新步骤状态失败，请重试')
+    } catch (error: any) {
       console.error('更新步骤状态失败:', error)
+
+      // 根据错误类型给出更明确的错误消息
+      if (error.response) {
+        // 处理HTTP错误
+        switch (error.response.status) {
+          case 401:
+            message.error({
+              content: '会话已过期，请重新登录',
+              key: messageKey,
+              duration: 5,
+            })
+            break
+          case 403:
+            message.error({
+              content: '权限不足，无法更新步骤状态',
+              key: messageKey,
+              duration: 5,
+            })
+            break
+          case 404:
+            message.error({
+              content: '任务或步骤不存在',
+              key: messageKey,
+            })
+            break
+          default:
+            message.error({
+              content: `服务器错误 (${error.response.status})，请稍后重试`,
+              key: messageKey,
+            })
+        }
+      } else if (error.request) {
+        // 请求已发送但没有收到响应
+        message.error({
+          content: '网络错误，请检查网络连接',
+          key: messageKey,
+        })
+      } else {
+        // 其他错误
+        message.error({
+          content: '更新步骤状态失败，请重试',
+          key: messageKey,
+        })
+      }
     }
   }
 

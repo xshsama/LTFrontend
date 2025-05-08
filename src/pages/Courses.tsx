@@ -21,7 +21,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SubjectForm from '../components/forms/SubjectForm'
 import { useAuth } from '../contexts/AuthContext'
-import apiService from '../services/apiService'
+import apiClient from '../services/apiService'
 import {
   createSubject,
   getCategoryBySubject,
@@ -188,9 +188,9 @@ const Courses: React.FC = () => {
         !!localStorage.getItem('authToken'),
       )
 
-      // 修复: 使用apiService实例而不是直接调用URL
+      // 修复: 使用apiClient实例而不是直接调用URL
       // 让请求拦截器能自动添加Authorization头
-      const response = await apiService.get('/api/subjects')
+      const response = await apiClient.get('/api/subjects')
 
       console.log('API请求成功，状态码:', response.status)
       console.log('后端返回的科目数据:', response.data) // 添加调试日志

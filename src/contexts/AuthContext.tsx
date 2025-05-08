@@ -30,6 +30,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// 添加一个全局可用的函数，用于显示"需要重新登录"提示
+export function showReloginPrompt() {
+  // 避免短时间内多次提示
+  const now = Date.now()
+  const lastPromptTime = parseInt(
+    localStorage.getItem('lastReloginPromptTime') || '0',
+  )
+
+  // 如果距上次提示不到30秒，则跳过
+  if (now - lastPromptTime < 30000) {
+    return
+  }
+
+  localStorage.setItem('lastReloginPromptTime', now.toString())
+
+  // 使用confirm而不是alert，让用户可以选择
+  const shouldRedirect = window.confirm(
+    '您的登录已过期或会话无效，需要重新登录才能继续操作。点击确定前往登录页面，或点击取消继续浏览。',
+  )
+
+  if (shouldRedirect) {
+    window.location.href = '/login'
+  }
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -39,6 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   // 登出函数
   const logout = () => {
+    console.log('执行登出操作，清除认证状态')
     // 清除localStorage和cookie的认证信息
     localStorage.removeItem('authToken')
     localStorage.removeItem('user')
@@ -48,11 +74,64 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setUser(null)
   }
 
+  // 尝试刷新令牌的方法
+  const refreshToken = async (): Promise<boolean> => {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      console.log('无法刷新令牌：未找到令牌')
+      return false
+    }
+
+    try {
+      // 使用axios而不是apiClient以避免循环依赖
+      const response = await fetch(
+        'http://localhost:8080/api/auth/refresh-token',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token }),
+        },
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data?.data?.token) {
+          console.log('令牌刷新成功，保存新令牌')
+          localStorage.setItem('authToken', data.data.token)
+          return true
+        }
+      }
+      console.error('令牌刷新失败:', response.status)
+      return false
+    } catch (error) {
+      console.error('刷新令牌时出错:', error)
+      return false
+    }
+  }
+
   // 注册登出处理函数到apiService
   useEffect(() => {
     // 将登出函数注册到API服务，这样token过期时可以调用
     setLogoutHandler(logout)
-  }, [])
+
+    // 每30分钟尝试刷新令牌一次
+    const tokenRefreshInterval = setInterval(async () => {
+      const token = localStorage.getItem('authToken')
+      if (isAuthenticated && token) {
+        console.log('执行定期令牌刷新检查')
+        const success = await refreshToken()
+        if (!success) {
+          console.warn('定期令牌刷新失败，可能需要重新登录')
+        }
+      }
+    }, 30 * 60 * 1000) // 30分钟
+
+    return () => {
+      clearInterval(tokenRefreshInterval)
+    }
+  }, [isAuthenticated])
 
   // 从后端获取用户信息的函数
   const fetchUserProfile = async (token: string): Promise<User | null> => {

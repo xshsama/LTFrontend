@@ -14,10 +14,11 @@ import {
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React, { useMemo, useState } from 'react'
-import { deleteTask, updateTaskStatus } from '../../services/taskService'
+import { deleteTask, updateTask } from '../../services/taskService'
 import '../../styles/tables.css'
 import { Task } from '../../types/task'
 
+import { Tag as TagType } from '../../types/tag' // Import Tag type
 const { Link } = Typography
 const { TabPane } = Tabs
 
@@ -50,6 +51,7 @@ const typeNameMap: Record<string, string> = {
 const statusColorMap: Record<string, string> = {
   ACTIVE: 'processing',
   ARCHIVED: 'success',
+  COMPLETED: 'success',
   BLOCKED: 'error',
 }
 
@@ -57,6 +59,7 @@ const statusColorMap: Record<string, string> = {
 const statusNameMap: Record<string, string> = {
   ACTIVE: '进行中',
   ARCHIVED: '已完成',
+  COMPLETED: '已完成',
   BLOCKED: '已阻塞',
 }
 
@@ -122,47 +125,34 @@ const TasksTable: React.FC<TasksTableProps> = ({
     // 设置为加载状态
     setLocalLoading(true)
     try {
-      await updateTaskStatus(id, status)
+      let newCompletionDate: Date | undefined = undefined
+      if (status === 'ARCHIVED' || status === 'COMPLETED') {
+        newCompletionDate = new Date()
+      }
+
+      // 使用 updateTask 来同时更新状态和完成日期
+      const updatedTaskData = await updateTask(id, {
+        status: status as Task['status'],
+        completionDate: newCompletionDate,
+      })
       message.success('任务状态已更新')
 
       // 更新本地数据
       setLocalData((prev) =>
-        prev.map((task) => {
-          if (task.id === id) {
-            let newStatus = status as Task['status']
-            let newCompletionDate = task.completionDate
-
-            if (
-              task.type === 'STEP' &&
-              task.steps &&
-              task.steps.every((step) => step.status === 'DONE')
-            ) {
-              newStatus = 'COMPLETED'
-              newCompletionDate = new Date()
-            } else if (status === 'ARCHIVED') {
-              newStatus = 'ARCHIVED' // 确保 ARCHIVED 状态正确设置
-              newCompletionDate = new Date(
-                new Date().toISOString().split('T')[0],
-              )
-            } else if (status === 'COMPLETED') {
-              newCompletionDate = new Date()
-            }
-
-            return {
-              ...task,
-              status: newStatus,
-              completionDate: newCompletionDate,
-            }
-          }
-          return task
-        }),
+        prev.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                status: updatedTaskData.status,
+                completionDate: updatedTaskData.completionDate,
+              }
+            : task,
+        ),
       )
 
       // 如果父组件提供了回调，则调用它以更新UI
-      // 需要找到更新后的任务来传递正确的状态
-      const updatedTask = localData.find((task) => task.id === id)
-      if (onStatusChange && updatedTask) {
-        onStatusChange(id, updatedTask.status)
+      if (onStatusChange) {
+        onStatusChange(id, updatedTaskData.status)
       }
     } catch (error) {
       console.error('更新任务状态失败:', error)
@@ -182,30 +172,64 @@ const TasksTable: React.FC<TasksTableProps> = ({
 
   // 当外部data或loading状态变化时更新本地数据和加载状态
   React.useEffect(() => {
-    const processedData = data.map((task) => {
-      if (
-        task.type === 'STEP' &&
-        task.steps &&
-        task.steps.every((step) => step.status === 'DONE') &&
-        task.status !== 'COMPLETED' &&
-        task.status !== 'ARCHIVED'
-      ) {
-        return {
-          ...task,
-          status: 'COMPLETED' as Task['status'],
-          completionDate: new Date(),
+    const processAndUpdateTasks = async () => {
+      const updatedTasksPromises = data.map(async (task) => {
+        if (
+          task.type === 'STEP' &&
+          task.steps &&
+          task.steps.every((step) => step.status === 'DONE') &&
+          // 使用 includes 来避免 TypeScript 对联合类型的过度缩小判断
+          !(task.status === 'COMPLETED' || task.status === 'ARCHIVED')
+        ) {
+          // 当步骤任务所有步骤完成时，调用 updateTask 更新后端
+          try {
+            const newCompletionDate = new Date()
+            // 外层 if 已经保证了 task.status 不是 'COMPLETED' 或 'ARCHIVED'
+            // 因此可以直接调用 updateTask
+            await updateTask(task.id!, {
+              status: 'COMPLETED',
+              completionDate: newCompletionDate,
+            })
+            return {
+              ...task,
+              status: 'COMPLETED' as Task['status'],
+              completionDate: newCompletionDate,
+            }
+          } catch (error) {
+            console.error(`自动更新任务 ${task.id} 状态失败:`, error)
+            // 如果API调用失败，保留原始任务状态，避免UI与后端不一致
+            return task
+          }
         }
-      }
-      return task
-    })
-    setLocalData(processedData)
+        return task
+      })
+      const resolvedTasks = await Promise.all(updatedTasksPromises)
+      setLocalData(resolvedTasks)
+    }
+
+    if (data.length > 0) {
+      processAndUpdateTasks()
+    } else {
+      setLocalData([])
+    }
     setLocalLoading(loading)
   }, [data, loading])
 
   // 查找任务对应的目标标题
   const getGoalTitle = (task: Task): string => {
-    if (!goals || !task.goal) return '-'
-    const goal = goals.find((g) => g.id === task.goal?.id)
+    // 首先检查 'goals' 数组是否存在且不为空
+    if (!goals || goals.length === 0) return '-'
+
+    // 尝试从 task.goal 对象获取目标ID，如果不存在，则使用 task.goalId
+    const targetGoalId = task.goal?.id ?? task.goalId
+
+    // 如果最终没有有效的 targetGoalId，则返回 '-'
+    if (targetGoalId === undefined || targetGoalId === null) return '-'
+
+    // 在 'goals' 数组中查找匹配的目标
+    const goal = goals.find((g) => g.id === targetGoalId)
+
+    // 如果找到目标，则返回其标题，否则返回 '-'
     return goal ? goal.title : '-'
   }
 
@@ -279,6 +303,27 @@ const TasksTable: React.FC<TasksTableProps> = ({
       },
       render: (goalTitle: string) => (
         <Tooltip title={goalTitle}>{goalTitle}</Tooltip>
+      ),
+    },
+    {
+      title: '标签',
+      dataIndex: 'tags',
+      key: 'tags',
+      render: (tags: TagType[] | undefined) => (
+        <>
+          {tags && tags.length > 0
+            ? tags.map((tag: TagType) => (
+                <Tag
+                  color={tag.color || undefined}
+                  key={tag.id}
+                >
+                  {' '}
+                  {/* Use tag.color, provide undefined for default AntD behavior if color is empty string */}
+                  {tag.title}
+                </Tag>
+              ))
+            : '-'}
+        </>
       ),
     },
     {

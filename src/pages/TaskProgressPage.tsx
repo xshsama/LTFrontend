@@ -12,9 +12,6 @@ import {
   DatePicker,
   Divider,
   Empty,
-  Form,
-  Input,
-  Modal,
   Progress,
   Result,
   Row,
@@ -42,7 +39,6 @@ import {
   getAllTasks,
   getTasksByGoal,
   updateStepStatus,
-  updateStepTaskSteps,
 } from '../services/taskService'
 import { Goal } from '../types/goals'
 import { CreativeTask, HabitTask, StepTask, Task } from '../types/task'
@@ -89,11 +85,7 @@ const TaskProgressPage: React.FC = () => {
     dayjs(),
   ])
 
-  // 待办事项管理状态
-  const [todoModalVisible, setTodoModalVisible] = useState(false)
-  const [currentStepId, setCurrentStepId] = useState<string | null>(null)
-  const [currentTaskId, setCurrentTaskId] = useState<number | null>(null)
-  const [todoForm] = Form.useForm()
+  // 状态管理变量
 
   // 获取任务和目标数据
   useEffect(() => {
@@ -311,7 +303,11 @@ const TaskProgressPage: React.FC = () => {
   // 任务完成时间线数据
   const completedTaskTimeline = useMemo(() => {
     return filteredTasks
-      .filter((task) => task.status === 'COMPLETED' && task.completionDate)
+      .filter(
+        (task) =>
+          (task.status === 'COMPLETED' || task.status === 'ARCHIVED') &&
+          task.completionDate,
+      )
       .sort((a, b) => {
         if (!a.completionDate || !b.completionDate) return 0
         return (
@@ -675,60 +671,6 @@ const TaskProgressPage: React.FC = () => {
                                             )}
                                           </div>
                                         </div>
-                                        {step.asTodoList &&
-                                          step.todoItems &&
-                                          step.todoItems.length > 0 && (
-                                            <div
-                                              style={{
-                                                marginLeft: 16,
-                                                marginTop: 4,
-                                              }}
-                                            >
-                                              <Progress
-                                                percent={
-                                                  (step.todoItems.filter(
-                                                    (item) => item.completed,
-                                                  ).length /
-                                                    step.todoItems.length) *
-                                                  100
-                                                }
-                                                size="small"
-                                                style={{
-                                                  marginBottom: 8,
-                                                  maxWidth: 120,
-                                                }}
-                                              />
-                                              <ul
-                                                style={{
-                                                  listStyleType: 'circle',
-                                                }}
-                                              >
-                                                {step.todoItems.map((item) => (
-                                                  <li key={item.id}>
-                                                    <Text
-                                                      delete={item.completed}
-                                                      type={
-                                                        item.completed
-                                                          ? 'secondary'
-                                                          : undefined
-                                                      }
-                                                      style={{
-                                                        color:
-                                                          item.priority === 2
-                                                            ? '#f5222d'
-                                                            : item.priority ===
-                                                              1
-                                                            ? '#fa8c16'
-                                                            : undefined,
-                                                      }}
-                                                    >
-                                                      {item.content}
-                                                    </Text>
-                                                  </li>
-                                                ))}
-                                              </ul>
-                                            </div>
-                                          )}
                                       </div>
                                     </li>
                                   ),
@@ -878,127 +820,7 @@ const TaskProgressPage: React.FC = () => {
         </TabPane>
       </Tabs>
 
-      {/* 添加待办事项的Modal */}
-      <Modal
-        title="添加待办事项"
-        visible={todoModalVisible}
-        onCancel={() => setTodoModalVisible(false)}
-        onOk={async () => {
-          try {
-            const values = await todoForm.validateFields()
-
-            // 创建新的待办事项
-            const newTodoItem = {
-              id: `todo-${Date.now()}`,
-              content: values.content,
-              completed: false,
-              createdAt: new Date(),
-              priority: values.priority || 0,
-            }
-
-            // 找到当前任务和步骤
-            const taskIndex = stepTasks.findIndex(
-              (task) => task.id === currentTaskId,
-            )
-
-            if (taskIndex === -1) {
-              message.error('找不到选定的任务')
-              return
-            }
-
-            const task = stepTasks[taskIndex]
-            if (!task.steps || task.steps.length === 0) {
-              message.error('此任务没有步骤信息')
-              return
-            }
-
-            // 更新当前步骤的待办事项
-            const newStepTasks = [...stepTasks]
-            const taskSteps = [...newStepTasks[taskIndex].steps!]
-
-            // 如果没有选择特定步骤，默认添加到第一个步骤
-            const stepIndex = currentStepId
-              ? taskSteps.findIndex((s) => s.id === currentStepId)
-              : 0
-
-            if (stepIndex === -1) {
-              message.error('找不到选定的步骤')
-              return
-            }
-
-            const step = taskSteps[stepIndex]
-
-            // 确保步骤的todoItems是一个数组
-            if (!step.todoItems) {
-              step.todoItems = []
-            }
-
-            if (!step.asTodoList) {
-              step.asTodoList = true
-            }
-
-            // 添加新的待办事项
-            step.todoItems.push(newTodoItem)
-
-            // 更新步骤
-            taskSteps[stepIndex] = step
-            newStepTasks[taskIndex].steps = taskSteps
-
-            // 更新状态
-            setStepTasks(newStepTasks)
-
-            // 更新任务列表
-            const updatedTasks = tasks.map((t) =>
-              t.id === task.id ? { ...t, steps: taskSteps } : t,
-            )
-            setTasks(updatedTasks)
-
-            // 显示加载中提示
-            message.loading('正在保存待办事项...', 0)
-
-            try {
-              // 调用API保存步骤更新
-              await updateStepTaskSteps(task.id, taskSteps)
-
-              message.destroy() // 销毁加载中提示
-              message.success('待办事项已添加并保存')
-            } catch (err) {
-              console.error('保存待办事项失败:', err)
-              message.destroy() // 销毁加载中提示
-              message.error('保存待办事项失败，请重试')
-            }
-
-            setTodoModalVisible(false)
-            todoForm.resetFields()
-          } catch (info) {
-            console.log('表单验证失败:', info)
-          }
-        }}
-      >
-        <Form
-          form={todoForm}
-          layout="vertical"
-        >
-          <Form.Item
-            name="content"
-            label="待办事项内容"
-            rules={[{ required: true, message: '请输入待办事项内容' }]}
-          >
-            <Input placeholder="请输入待办事项内容" />
-          </Form.Item>
-
-          <Form.Item
-            name="priority"
-            label="优先级"
-          >
-            <Select defaultValue={0}>
-              <Select.Option value={0}>低</Select.Option>
-              <Select.Option value={1}>中</Select.Option>
-              <Select.Option value={2}>高</Select.Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* Modal代码已移除 */}
     </div>
   )
 }
