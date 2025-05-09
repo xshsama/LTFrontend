@@ -1,5 +1,15 @@
-import { Goal } from '../types/goals';
+import { Goal, GoalStatus, Priority } from '../types/goals'; // Corrected GoalPriority to Priority
 import apiClient from './apiService';
+
+// Define the request payload structure for updating a goal, matching backend GoalDTO.UpdateGoalRequest
+interface UpdateGoalRequest {
+    title?: string;
+    status?: GoalStatus; // Use GoalStatus enum/type
+    completionDate?: string | null; // ISO string format for date
+    priority?: Priority; // Use Priority type
+    progress?: number;
+    categoryId?: number | null;
+}
 
 // 获取所有目标列表
 export const getGoals = async (): Promise<Goal[]> => {
@@ -96,13 +106,36 @@ export const createGoal = async (goalData: {
 };
 
 // 更新目标
-export const updateGoal = async (id: number, goalData: Partial<Goal>): Promise<Goal> => {
+export const updateGoal = async (id: number, goalData: UpdateGoalRequest): Promise<Goal> => {
     try {
-        const response = await apiClient.put(`/api/goals/${id}`, goalData);
+        console.log(`正在发送更新目标 (ID: ${id}) 请求:`, goalData);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.error(`更新目标 (ID: ${id}) 失败: 未找到认证令牌`);
+            throw new Error('认证失败，请重新登录');
+        }
+        const response = await apiClient.put(`/api/goals/${id}`, goalData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        console.log(`更新目标 (ID: ${id}) 成功:`, response.data);
         return response.data;
-    } catch (error) {
-        console.error('更新目标失败:', error);
-        throw error;
+    } catch (error: any) {
+        console.error(`更新目标 (ID: ${id}) 失败:`, error.response?.status, error.response?.data || error.message);
+        // Provide more specific error messages
+        let errorMessage = '更新目标失败';
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.response?.status === 404) {
+            errorMessage = '目标未找到';
+        } else if (error.response?.status === 403) {
+            errorMessage = '权限不足';
+        } else if (error.response?.status === 401) {
+            errorMessage = '认证已过期，请重新登录';
+        }
+        throw new Error(errorMessage);
     }
 };
 
@@ -131,10 +164,32 @@ export const updateGoalProgress = async (id: number, progress: number): Promise<
 // 删除目标
 export const deleteGoal = async (id: number): Promise<void> => {
     try {
-        await apiClient.delete(`api/goals/${id}`);
-    } catch (error) {
-        console.error('删除目标失败:', error);
-        throw error;
+        console.log(`正在发送删除目标 (ID: ${id}) 请求...`);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.error(`删除目标 (ID: ${id}) 失败: 未找到认证令牌`);
+            throw new Error('认证失败，请重新登录');
+        }
+        await apiClient.delete(`/api/goals/${id}`, { // Ensure leading slash for the path
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        console.log(`删除目标 (ID: ${id}) 成功`);
+    } catch (error: any) {
+        console.error(`删除目标 (ID: ${id}) 失败:`, error.response?.status, error.response?.data || error.message);
+        // Provide more specific error messages
+        let errorMessage = '删除目标失败';
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.response?.status === 404) {
+            errorMessage = '目标未找到';
+        } else if (error.response?.status === 403) {
+            errorMessage = '权限不足';
+        } else if (error.response?.status === 401) {
+            errorMessage = '认证已过期，请重新登录';
+        }
+        throw new Error(errorMessage);
     }
 };
 

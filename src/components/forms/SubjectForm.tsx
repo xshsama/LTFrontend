@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { default as apiClient } from '../../services/apiService'
 import {
   getCategories,
-  getCategoryBySubject,
+  getCategoriesBySubject, // Import the renamed function
 } from '../../services/subjectService'
 import { Subject as BaseSubject } from '../../types/goals'
 
@@ -71,10 +71,25 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         const fetchCategoryForSubject = async () => {
           try {
             setFetching(true)
-            const categoryRes = await getCategoryBySubject(initialData.id)
-            if (categoryRes.data) {
-              const categoryId = categoryRes.data.id
+            // Call the renamed function which returns an array wrapped in ApiResponse
+            const response = await getCategoriesBySubject(initialData.id)
+            // Assuming the response structure is { code, message, data: CategoryDTO[] }
+            const categoriesData = response.data?.data
+            if (
+              categoriesData &&
+              Array.isArray(categoriesData) &&
+              categoriesData.length > 0
+            ) {
+              // Take the ID of the first category in the list
+              const categoryId = categoriesData[0].id
               form.setFieldsValue({ categoryId })
+            } else {
+              // Handle case where no categories are returned or response format is unexpected
+              console.log(
+                `No categories found for subject ${initialData.id} or unexpected response format.`,
+              )
+              // Optionally set categoryId to null or undefined if needed
+              // form.setFieldsValue({ categoryId: null });
             }
           } catch (error) {
             console.error('获取学科分类信息失败:', error)
@@ -115,12 +130,13 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         console.error('获取学科列表失败:', error)
       }
 
+      // Send only the fields expected by the backend Category entity
       const res = await apiClient.post('/api/categories', {
         name: newCategoryName,
         description: `分类: ${newCategoryName}`,
-        subject: {
-          id: subjectId,
-        },
+        // Removed the 'subject' field as it's not part of the Category entity anymore
+        // and the relationship is managed via an intermediate table.
+        // Associating the category with a subject needs a separate mechanism/API call if required immediately.
       })
 
       // 正确处理响应数据

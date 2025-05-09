@@ -24,24 +24,30 @@ import { useAuth } from '../contexts/AuthContext'
 import apiClient from '../services/apiService'
 import {
   createSubject,
-  getCategoryBySubject,
+  // getCategoriesBySubject, // Removed as data is now included in subject DTO
   updateSubject,
 } from '../services/subjectService'
 
 const { Title } = Typography
 
-// Define Course interface
+// Define CategoryDTO type based on backend DTO
+interface CategoryDTO {
+  id: number
+  name: string
+  subjectId: number | null // subjectId might be null based on CategoryServiceImpl
+}
+
+// Define Course interface - updated category field
 export interface Course {
   id: string | number
   key: string
-  name: string // 保持不变，因为其他地方如列定义等都依赖此属性
-  title?: string // 添加可选的title字段，以适应后端返回
-  category: string
-  categoryId?: number // 添加categoryId字段
-  description?: string // 添加description字段
+  name: string // Keep for compatibility if needed elsewhere, but prefer title
+  title?: string // Primary display name from backend
+  categories: CategoryDTO[] // Changed from category: string and categoryId
+  description?: string
   relatedGoalsCount: number
   relatedTasksCount: number
-  tags?: string[]
+  tags?: string[] // This is List<String> from backend
 }
 
 // 初始化为空数组，将通过API调用获取数据
@@ -65,15 +71,18 @@ const createCourseColumns = (
   },
   {
     title: '分类',
-    dataIndex: 'category',
-    key: 'category',
-    filters: [
-      { text: '编程', value: '编程' },
-      { text: '语言', value: '语言' },
-      { text: '设计', value: '设计' },
-    ],
-    onFilter: (value: React.Key | boolean, record: Course) =>
-      record.category === value,
+    dataIndex: 'categories', // Use the new categories field
+    key: 'categories',
+    render: (categories: CategoryDTO[]) => {
+      // Display the name of the first category, or '未分类'
+      const categoryName =
+        categories && categories.length > 0 ? categories[0].name : '未分类'
+      // Optionally wrap in a Tag or Tooltip if multiple categories need indication
+      return categoryName
+    },
+    // TODO: Update filters and onFilter logic if filtering by category is still needed
+    // filters: ...
+    // onFilter: ...
   },
   {
     title: '关联目标数',
@@ -93,39 +102,34 @@ const createCourseColumns = (
     title: '标签',
     key: 'tags',
     dataIndex: 'tags',
-    render: (tags?: any) => {
-      console.log('渲染标签数据:', tags) // 输出标签数据以便调试
+    render: (tags?: string[]) => {
+      // Changed type from any to string[] | undefined
+      // console.log('渲染标签数据:', tags) // Optional: keep for debugging
       // 检查标签数据的类型和结构
       if (!tags || (Array.isArray(tags) && tags.length === 0)) {
         return <Tag color="default">无标签</Tag> // 当没有标签时显示"无标签"
       }
 
-      // 如果tags是数组，直接渲染
+      // If tags is a non-empty array (guaranteed to be string[] here)
       if (Array.isArray(tags)) {
         return (
           <>
-            {tags.map((tag, index) => {
-              // 如果tag是对象（例如 {id: 1, name: 'tag1', title: 'tag1'}），使用title或name属性
-              if (typeof tag === 'object' && tag !== null) {
-                return (
-                  <Tag
-                    key={tag.id || index}
-                    color={tag.color || 'blue'}
-                  >
-                    {tag.title || tag.name || '未命名标签'}
-                  </Tag>
-                )
-              }
-              // 如果tag是字符串，直接使用
-              return (
+            {tags.map(
+              (
+                tag: string,
+                index: number, // Explicitly type tag as string
+              ) => (
+                // Directly render the tag string
                 <Tag
                   key={index}
                   color="blue"
                 >
+                  {' '}
+                  {/* Assign a default color or use logic if needed */}
                   {tag}
                 </Tag>
-              )
-            })}
+              ),
+            )}
           </>
         )
       }
@@ -236,88 +240,39 @@ const Courses: React.FC = () => {
         subjectsArray = []
       }
 
-      // 创建一个暂存对象，通过Promise.all处理所有异步请求
-      const subjectsWithCategories = await Promise.all(
-        subjectsArray.map(async (subject: any) => {
-          let categoryName = '未分类'
-          let categoryId = null
+      // 直接映射后端返回的 SubjectDTO 数据到前端 Course 类型
+      const subjectsWithCategories = subjectsArray.map((subject: any) => {
+        // 从 subject.category (CategoryDTO) 获取分类信息
+        const categoryName = subject.category?.name || '未分类'
+        const categoryId = subject.category?.id || null
 
-          // 如果有科目ID，则通过API获取对应的分类信息
-          if (subject.id) {
-            try {
-              // 通过getCategoryBySubject API获取分类信息
-              const categoryResponse = await getCategoryBySubject(subject.id)
-              console.log('科目分类响应:', categoryResponse.data)
-              if (categoryResponse.data && categoryResponse.data.name) {
-                categoryName = categoryResponse.data.name
-                categoryId = categoryResponse.data.id
-              }
-            } catch (error) {
-              console.error(`获取科目${subject.id}的分类信息失败:`, error)
-            }
-          }
+        // 直接使用后端计算的统计数据，处理 null 情况
+        const goalsCount = Number(subject.totalGoals) || 0
+        const tasksCount = Number(subject.totalTasks) || 0
 
-          // 使用debug方式查看subject的结构
-          console.log('科目详细数据:', JSON.stringify(subject, null, 2))
+        // 直接使用后端返回的标签名称列表 (List<String>)
+        const tags = Array.isArray(subject.tags) ? subject.tags : []
 
-          // 获取关联目标和任务的数量 - 优先使用后端提供的统计字段
-          let goalsCount = 0
-          if (subject.totalGoals !== undefined) {
-            goalsCount = subject.totalGoals
-          } else if (subject.goalsCount !== undefined) {
-            goalsCount = subject.goalsCount
-          } else if (subject.goals) {
-            goalsCount = Array.isArray(subject.goals) ? subject.goals.length : 0
-          }
+        // 调试输出原始数据
+        // console.log('原始科目数据:', JSON.stringify(subject, null, 2));
 
-          let tasksCount = 0
-          if (subject.totalTasks !== undefined) {
-            tasksCount = subject.totalTasks
-          } else if (subject.tasksCount !== undefined) {
-            tasksCount = subject.tasksCount
-          } else if (subject.tasks) {
-            tasksCount = Array.isArray(subject.tasks) ? subject.tasks.length : 0
-          }
+        const courseData: Course = {
+          id: subject.id || Date.now(),
+          key: subject.id ? subject.id.toString() : Date.now().toString(),
+          title: subject.title || '未命名学科',
+          name: subject.title || '未命名学科', // Keep name for table dataIndex compatibility for now
+          categories: Array.isArray(subject.categories)
+            ? subject.categories
+            : [], // Use subject.categories directly
+          relatedGoalsCount: goalsCount,
+          relatedTasksCount: tasksCount,
+          tags: tags, // string[] from backend
+          description: subject.description || '',
+        }
 
-          // 调试输出关联数量
-          console.log(
-            `科目 ${subject.title} 的关联目标数: ${goalsCount}, 关联任务数: ${tasksCount}`,
-          )
-
-          // 处理标签 - 可能是数组或其他格式
-          let tags = []
-          if (subject.tags) {
-            // 确保tags总是一个数组
-            tags = Array.isArray(subject.tags)
-              ? subject.tags
-              : typeof subject.tags === 'string'
-              ? [subject.tags]
-              : []
-
-            // 如果是空数组，添加一个默认标签以便于测试
-            if (tags.length === 0) {
-              tags = ['学习中']
-            }
-          }
-
-          // 返回包含分类名称和ID的科目信息
-          const courseData = {
-            id: subject.id || Date.now(), // 如果id为undefined，使用时间戳作为临时id
-            key: subject.id ? subject.id.toString() : Date.now().toString(), // 安全地调用toString
-            title: subject.title || subject.name || '未命名学科', // 兼容新旧数据格式，优先使用title，然后才是name
-            name: subject.title || subject.name || '未命名学科', // 确保同时设置name属性，以匹配Course接口
-            categoryId: categoryId, // 保存分类ID用于编辑
-            category: categoryName, // 显示实际的分类名称
-            relatedGoalsCount: goalsCount,
-            relatedTasksCount: tasksCount,
-            tags: tags,
-            description: subject.description || '', // 添加描述字段
-          }
-
-          console.log('转换后的课程数据:', courseData)
-          return courseData
-        }),
-      )
+        // console.log('转换后的课程数据:', courseData);
+        return courseData
+      }) // End of map function body
 
       // 在接收到结果后，检查数据是否有效
       console.log('处理后的所有课程数据:', subjectsWithCategories)
@@ -458,7 +413,7 @@ const Courses: React.FC = () => {
                   // TODO: 实现删除课程的API调用
                   try {
                     // 假设这里有一个删除API
-                    // await deleteSubject(record.id);
+                    await apiClient.delete(`/api/subjects/${record.id}`)
                     messageApi.success('课程删除成功!')
                     fetchCourses() // 刷新列表
                   } catch (error) {
@@ -485,11 +440,14 @@ const Courses: React.FC = () => {
               editingCourse
                 ? {
                     id: Number(editingCourse.id),
-                    title: editingCourse.name,
-                    categoryId: editingCourse.categoryId
-                      ? Number(editingCourse.categoryId)
-                      : undefined,
-                    // Subject 接口需要这些字段
+                    title: editingCourse.name, // Use name for form title consistency? Or editingCourse.title?
+                    // Get categoryId from the first category in the list, if available
+                    categoryId:
+                      editingCourse.categories &&
+                      editingCourse.categories.length > 0
+                        ? editingCourse.categories[0].id
+                        : undefined,
+                    // Subject interface might need these, provide defaults
                     createdAt: new Date(),
                     updatedAt: new Date(),
                   }

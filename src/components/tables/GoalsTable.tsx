@@ -1,4 +1,18 @@
-import { Progress, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import {
+  DeleteOutlined,
+  EditOutlined,
+  QuestionCircleOutlined,
+} from '@ant-design/icons'
+import {
+  Button,
+  Popconfirm,
+  Progress,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React from 'react'
 import '../../styles/tables.css'
@@ -20,6 +34,8 @@ interface GoalsTableProps {
   tasks: Task[]
   subjects: Subject[]
   onRowClick: (goal: Goal) => void
+  onEdit?: (goal: Goal) => void // Add onEdit prop
+  onDelete?: (goalId: number) => void // Add onDelete prop
 }
 
 const GoalsTable: React.FC<GoalsTableProps> = ({
@@ -29,6 +45,8 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
   tasks = [],
   subjects = [],
   onRowClick,
+  onEdit, // Destructure new props
+  onDelete, // Destructure new props
 }) => {
   // 添加行点击处理
   const handleRowClick = (record: Goal) => {
@@ -194,8 +212,45 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       className: 'action-column',
       render: (_: any, record: Goal) => (
         <Space size="middle">
-          <a>编辑</a>
-          <a>删除</a>
+          <Tooltip title="编辑目标">
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={(e: React.MouseEvent) => {
+                // Add type for event
+                e.stopPropagation() // Prevent row click
+                onEdit?.(record)
+              }}
+              style={{ padding: 0 }}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="确认删除目标?"
+            description={`您确定要删除目标 "${record.title}" 吗？相关任务不会被删除。`}
+            icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
+            onConfirm={(e) => {
+              e?.stopPropagation() // Prevent row click
+              onDelete?.(record.id)
+            }}
+            onCancel={(e) => e?.stopPropagation()}
+            okText="确定删除"
+            cancelText="取消"
+          >
+            {/* Tooltip for the delete button inside Popconfirm */}
+            <Tooltip title="删除目标">
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={(e: React.MouseEvent) => {
+                  // Ensure type is present
+                  // Stop propagation to prevent triggering row click when opening popconfirm
+                  e.stopPropagation()
+                }}
+                style={{ padding: 0 }} // Removed margin as Space provides spacing
+              />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },

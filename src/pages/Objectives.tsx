@@ -12,12 +12,19 @@ import {
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GoalForm from '../components/forms/GoalForm'
+// Import UpdateGoalRequest type if needed, or rely on type inference from service
+// import { UpdateGoalRequest } from '../services/goalService'; // Assuming type is defined/exported there
 import TaskForm from '../components/forms/TaskForm'
 import AchievementsTable from '../components/tables/AchievementsTable'
 import GoalsTable from '../components/tables/GoalsTable'
 import TasksTable from '../components/tables/TasksTable'
 import { useAuth } from '../contexts/AuthContext'
-import { createGoal, getGoals } from '../services/goalService'
+import {
+  createGoal,
+  deleteGoal,
+  getGoals,
+  updateGoal,
+} from '../services/goalService' // Import updateGoal and deleteGoal
 import {
   getCategories,
   getSubjects,
@@ -58,6 +65,8 @@ const ObjectivesPage: React.FC = () => {
   const [goalModalVisible, setGoalModalVisible] = useState(false)
   const [taskModalVisible, setTaskModalVisible] = useState(false)
   const [formSubmitting, setFormSubmitting] = useState(false)
+  const [isEditGoalModalVisible, setIsEditGoalModalVisible] = useState(false) // State for edit modal
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null) // State for goal being edited
 
   // 在组件挂载时获取学科、分类和标签数据
   useEffect(() => {
@@ -322,6 +331,96 @@ const ObjectivesPage: React.FC = () => {
     }
   }
 
+  // --- Edit and Delete Handlers ---
+
+  const handleDeleteGoal = async (goalId: number) => {
+    // Simple confirmation dialog
+    if (window.confirm(`确定要删除目标 #${goalId} 吗？此操作不可撤销。`)) {
+      try {
+        setLoading(true) // Indicate loading state
+        await deleteGoal(goalId) // Call the service function
+        message.success(`目标 #${goalId} 已成功删除`)
+        // Update the goals list in the state by filtering out the deleted goal
+        setGoals((prevGoals) => prevGoals.filter((goal) => goal.id !== goalId))
+        // If the deleted goal was the selected one, clear the selection and tasks
+        if (selectedGoalId === goalId) {
+          setSelectedGoalId(null)
+          setTasks([]) // Clear tasks as the parent goal is gone
+        }
+      } catch (error: any) {
+        console.error(`删除目标 #${goalId} 失败:`, error)
+        message.error(error.message || '删除目标失败，请重试')
+      } finally {
+        setLoading(false) // Reset loading state
+      }
+    }
+  }
+
+  const handleEditGoalClick = (goal: Goal) => {
+    console.log('Editing goal:', goal) // Log the goal being edited
+    // Ensure dates are handled correctly if GoalForm expects Date objects
+    // The Goal type might have Date objects, but initialValues might need conversion if form expects specific format
+    setEditingGoal({
+      ...goal,
+      // Example: If form needs Date objects for date inputs
+      // targetDate: goal.targetDate ? new Date(goal.targetDate) : undefined,
+    })
+    setIsEditGoalModalVisible(true)
+  }
+
+  const handleEditGoalModalCancel = () => {
+    setIsEditGoalModalVisible(false)
+    setEditingGoal(null) // Clear the editing state
+  }
+
+  // Type for values should match UpdateGoalRequest from goalService
+  // We might need to define/import it properly if not inferred
+  const handleEditGoalFormSubmit = async (values: any) => {
+    if (!editingGoal) {
+      console.error('Cannot submit edit form, editingGoal is null')
+      return
+    }
+    console.log(
+      'Submitting update for goal:',
+      editingGoal.id,
+      'with values:',
+      values,
+    )
+    setFormSubmitting(true)
+    try {
+      // Prepare data matching UpdateGoalRequest structure
+      // The GoalForm's onFinish provides values based on form fields
+      // We need to ensure it aligns with what updateGoal service expects
+      const updatePayload = {
+        title: values.title,
+        status: values.status,
+        priority: values.priority,
+        // Add other fields from 'values' that match UpdateGoalRequest
+        // completionDate: values.completionDate ? values.completionDate.format('YYYY-MM-DD') : null, // Example formatting
+        // progress: values.progress,
+        // categoryId: values.categoryId,
+        // subjectId is usually not updatable via goal update, handle if needed
+      }
+
+      const updatedGoalData = await updateGoal(editingGoal.id, updatePayload)
+      message.success(`目标 #${editingGoal.id} 更新成功`)
+
+      // Update the goals list in the state
+      setGoals((prevGoals) =>
+        prevGoals.map(
+          (g) => (g.id === editingGoal.id ? { ...g, ...updatedGoalData } : g), // Merge updates, ensure all fields are present
+        ),
+      )
+
+      handleEditGoalModalCancel() // Close modal and clear state
+    } catch (error: any) {
+      console.error(`更新目标 #${editingGoal.id} 失败:`, error)
+      message.error(error.message || '更新目标失败，请重试')
+    } finally {
+      setFormSubmitting(false)
+    }
+  }
+
   // 如果未登录，显示提示信息
   if (!isAuthenticated) {
     return (
@@ -385,17 +484,44 @@ const ObjectivesPage: React.FC = () => {
     return result
   }, [goals, tasks, user]) // Added user to dependency array
 
+  // 计算包含动态进度的目标列表
+  const goalsWithCalculatedProgress = useMemo(() => {
+    if (!goals || goals.length === 0 || !tasks) {
+      return goals || [] // Return original goals or empty array if no data
+    }
+
+    return goals.map((goal) => {
+      const associatedTasks = tasks.filter(
+        (task) => task.goalId === goal.id || task.goal?.id === goal.id,
+      )
+      const totalTasks = associatedTasks.length
+      if (totalTasks === 0) {
+        return { ...goal, progress: 0 } // No tasks, progress is 0
+      }
+
+      const completedTasks = associatedTasks.filter(
+        (task) => task.status === 'COMPLETED' || task.status === 'ARCHIVED',
+      ).length
+
+      const calculatedProgress = Math.round((completedTasks / totalTasks) * 100)
+
+      return { ...goal, progress: calculatedProgress } // Update progress
+    })
+  }, [goals, tasks])
+
   const tabItems = [
     {
       key: 'goals',
       label: '学习目标',
       children: (
         <GoalsTable
-          data={goals}
+          data={goalsWithCalculatedProgress} // Use goals with calculated progress
           loading={loading}
-          taskTags={goalAggregatedTaskTags} // 使用新的聚合标签数据
+          taskTags={goalAggregatedTaskTags}
           tasks={tasks as any}
           subjects={subjects}
+          onEdit={handleEditGoalClick} // Pass edit handler
+          onDelete={handleDeleteGoal} // Pass delete handler
           onRowClick={(goal) => {
             setSelectedGoalId(goal.id)
           }}
@@ -473,8 +599,11 @@ const ObjectivesPage: React.FC = () => {
           subjects={subjects}
           categories={categories}
           onFinish={handleGoalFormSubmit}
+          // isSubmitting={formSubmitting} // Incorrect prop name
+          // Pass availableTags if GoalForm needs it
+          // availableTags={availableTags} // Removed prop, GoalForm does not accept it
           onCancel={() => setGoalModalVisible(false)}
-          loading={formSubmitting}
+          loading={formSubmitting} // Correct prop name is loading
         />
       </Modal>
 
@@ -509,6 +638,29 @@ const ObjectivesPage: React.FC = () => {
           onCancel={() => setTaskModalVisible(false)}
           loading={formSubmitting}
         />
+      </Modal>
+
+      {/* 编辑目标的模态框 */}
+      <Modal
+        title="编辑学习目标"
+        open={isEditGoalModalVisible}
+        onCancel={handleEditGoalModalCancel}
+        footer={null} // Footer is handled by Form's submit button
+        destroyOnClose={true} // Reset form state when modal is closed
+        maskClosable={false}
+      >
+        {/* Render GoalForm only when editingGoal is not null */}
+        {editingGoal && (
+          <GoalForm
+            subjects={subjects}
+            categories={categories}
+            initialValues={editingGoal} // Pass the goal data to prefill the form
+            onFinish={handleEditGoalFormSubmit} // Use the edit submit handler
+            onCancel={handleEditGoalModalCancel} // Pass cancel handler
+            loading={formSubmitting} // Correct prop name is loading
+            // availableTags={availableTags} // Pass tags if needed by GoalForm
+          />
+        )}
       </Modal>
     </div>
   )
