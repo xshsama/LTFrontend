@@ -1,22 +1,25 @@
 import { CalendarOutlined } from '@ant-design/icons' // Added icon
-import { Button, Col, Row, Statistic, Tooltip, Typography } from 'antd' // Added Button, Space, Statistic, Tooltip, message
+import { Button, Col, Row, Statistic, Tooltip, Typography } from 'antd'
 import React from 'react'
-import { HabitTask } from '../types/task' // Changed import from Task to HabitTask
+import { Link } from 'react-router-dom' // Added Link import
+import { HabitTask } from '../types/task'
 
 const { Title, Text } = Typography
 
 interface HabitTrackerProps {
-  tasks: HabitTask[] // Expecting only HabitTask objects
-  onCheckIn: (taskId: number) => Promise<void> // Callback for check-in action
-  loadingTaskIds?: Set<number> // Set of task IDs currently loading
-  onTaskSelect?: (task: HabitTask) => void // Callback when a task card is selected
+  tasks: HabitTask[]
+  onCheckIn: (taskId: number) => Promise<void>
+  loadingTaskIds?: Set<number>
+  onTaskSelect?: (task: HabitTask) => void
+  manageTasksPath?: string // New prop for navigation path
 }
 
 const HabitTracker: React.FC<HabitTrackerProps> = ({
   tasks = [],
   onCheckIn,
   loadingTaskIds = new Set(),
-  onTaskSelect, // Destructure the new prop
+  onTaskSelect,
+  manageTasksPath, // Destructure new prop
 }) => {
   const handleCheckInClick = (e: React.MouseEvent, taskId: number) => {
     e.stopPropagation() // Prevent potential parent clicks
@@ -96,19 +99,49 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({
                     />
                   </div>
                 </div>
-                <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                  <Tooltip title={alreadyCheckedIn ? '今日已打卡' : '今日打卡'}>
+                <div
+                  style={{
+                    marginTop: '16px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <Tooltip
+                    title={
+                      task.status === 'COMPLETED'
+                        ? '任务已完成'
+                        : alreadyCheckedIn
+                        ? '今日已打卡'
+                        : '今日打卡'
+                    }
+                  >
                     <Button
                       type="primary"
                       icon={<CalendarOutlined />}
                       onClick={(e) => handleCheckInClick(e, task.id)}
-                      disabled={alreadyCheckedIn || isLoading}
+                      disabled={
+                        alreadyCheckedIn ||
+                        isLoading ||
+                        task.status === 'COMPLETED'
+                      }
                       loading={isLoading}
-                      block // Make button full width
+                      block
                     >
-                      {alreadyCheckedIn ? '已打卡' : '打卡'}
+                      {task.status === 'COMPLETED'
+                        ? '已完成'
+                        : alreadyCheckedIn
+                        ? '已打卡'
+                        : '打卡'}
                     </Button>
                   </Tooltip>
+                  <Link
+                    to={manageTasksPath || '/tasks'}
+                    style={{ width: '100%' }}
+                  >
+                    <Button block>管理任务</Button>
+                  </Link>
                 </div>
               </div>
             </Col>

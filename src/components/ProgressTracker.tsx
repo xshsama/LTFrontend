@@ -28,7 +28,8 @@ interface ProgressTrackerProps {
     stepId: string,
     newStatus: 'PENDING' | 'DONE',
   ) => Promise<void>
-  onTaskUpdate?: (updatedTask: Task) => void // Added onTaskUpdate for CreativeTaskDetails
+  onTaskUpdate?: (updatedTask: Task) => void
+  manageTasksPath?: string // New prop for navigation path
 }
 
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({
@@ -40,7 +41,8 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   onDataRefreshed,
   onTaskSelect,
   onStepUpdate,
-  onTaskUpdate, // Destructure onTaskUpdate
+  onTaskUpdate,
+  manageTasksPath, // Destructure new prop
 }) => {
   const [tasks, setTasks] = React.useState<Task[]>(preloadedTasks || [])
   const [loading, setLoading] = React.useState(!preloadedTasks)
@@ -158,6 +160,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
             onCheckIn={onCheckIn}
             loadingTaskIds={loadingTaskIds}
             onTaskSelect={onTaskSelect}
+            manageTasksPath={manageTasksPath} // Pass down prop
           />
         </TabPane>
         <TabPane
@@ -177,11 +180,12 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         >
           {creativeTasks.length > 0 && onTaskUpdate ? (
             <CreativeTaskDetails
-              task={creativeTasks[0]} // Displaying the first creative task
-              onUpdate={onTaskUpdate} // Pass the onTaskUpdate prop from parent
+              task={creativeTasks[0]}
+              onUpdate={onTaskUpdate}
+              manageTasksPath={manageTasksPath} // Pass down prop
             />
           ) : (
-            <p>暂无创作任务或更新处理器未提供。</p> // Fallback if no creative tasks or onTaskUpdate is missing
+            <p>暂无创作任务或更新处理器未提供。</p>
           )}
         </TabPane>
       </Tabs>

@@ -56,7 +56,7 @@ interface TimelineTaskItem {
   type: Task['type']
   completionDate?: Date
   actualTimeMinutes?: number
-  steps?: Step[] // Changed from StepTask['steps'] to Step[] for clarity
+  steps?: Step[]
   timelineItemType: 'TASK_COMPLETION'
   timelineDate: Date
   originalTaskData: Task
@@ -73,7 +73,7 @@ interface TimelineCheckInItem {
 }
 
 type TimelineItem = TimelineTaskItem | TimelineCheckInItem
-type StepItemType = Step // Used for mapping in Timeline
+type StepItemType = Step
 
 const { Title, Text, Paragraph } = Typography
 const { TabPane } = Tabs
@@ -105,9 +105,6 @@ const TaskProgressPage: React.FC = () => {
   const navigate = useNavigate()
 
   const [tasks, setTasks] = useState<Task[]>([])
-  const [stepTasks, setStepTasks] = useState<StepTask[]>([])
-  const [habitTasks, setHabitTasks] = useState<HabitTask[]>([])
-  const [creativeTasks, setCreativeTasks] = useState<CreativeTask[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string>('overview')
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
@@ -128,25 +125,6 @@ const TaskProgressPage: React.FC = () => {
     ) {
       setSelectedTaskForDetailView(updatedTask)
     }
-    if (updatedTask.type === 'CREATIVE') {
-      setCreativeTasks((prev) =>
-        prev.map((t) =>
-          t.id === updatedTask.id ? (updatedTask as CreativeTask) : t,
-        ),
-      )
-    } else if (updatedTask.type === 'STEP') {
-      setStepTasks((prev) =>
-        prev.map((t) =>
-          t.id === updatedTask.id ? (updatedTask as StepTask) : t,
-        ),
-      )
-    } else if (updatedTask.type === 'HABIT') {
-      setHabitTasks((prev) =>
-        prev.map((t) =>
-          t.id === updatedTask.id ? (updatedTask as HabitTask) : t,
-        ),
-      )
-    }
   }
 
   useEffect(() => {
@@ -155,13 +133,6 @@ const TaskProgressPage: React.FC = () => {
       try {
         const tasksData: Task[] = await getAllTasks()
         setTasks(tasksData)
-        setStepTasks(tasksData.filter((t) => t.type === 'STEP') as StepTask[])
-        setHabitTasks(
-          tasksData.filter((t) => t.type === 'HABIT') as HabitTask[],
-        )
-        setCreativeTasks(
-          tasksData.filter((t) => t.type === 'CREATIVE') as CreativeTask[],
-        )
       } catch (error) {
         message.error('获取任务数据失败，请重试')
       } finally {
@@ -178,11 +149,6 @@ const TaskProgressPage: React.FC = () => {
     try {
       const tasksData: Task[] = await getAllTasks()
       setTasks(tasksData)
-      setStepTasks(tasksData.filter((t) => t.type === 'STEP') as StepTask[])
-      setHabitTasks(tasksData.filter((t) => t.type === 'HABIT') as HabitTask[])
-      setCreativeTasks(
-        tasksData.filter((t) => t.type === 'CREATIVE') as CreativeTask[],
-      )
       message.success('数据已刷新')
     } catch (error) {
       message.error('刷新数据失败，请重试')
@@ -359,7 +325,7 @@ const TaskProgressPage: React.FC = () => {
           type: task.type,
           completionDate: new Date(task.completionDate),
           actualTimeMinutes: task.actualTimeMinutes,
-          steps: task.type === 'STEP' ? (task as StepTask).steps : undefined, // Use .steps from StepTask
+          steps: task.type === 'STEP' ? (task as StepTask).steps : undefined,
           timelineItemType: 'TASK_COMPLETION',
           timelineDate: new Date(task.completionDate),
           originalTaskData: task,
@@ -481,13 +447,6 @@ const TaskProgressPage: React.FC = () => {
               } as HabitTask)
             : t,
         )
-      setHabitTasks((prevHabitTasks) =>
-        prevHabitTasks.map((t) =>
-          t.id === taskId
-            ? (updateState([t])[0] as HabitTask)
-            : (t as HabitTask),
-        ),
-      )
       setTasks(updateState)
       await checkInHabitTask(taskId)
       message.success('打卡成功！')
@@ -506,20 +465,18 @@ const TaskProgressPage: React.FC = () => {
 
   const handleStepUpdate = async (
     taskId: number,
-    stepId: string, // Changed to string
+    stepId: string,
     newStatus: 'PENDING' | 'DONE',
   ) => {
     setLoadingTaskIds((prev) => new Set(prev).add(taskId))
     try {
-      await updateStepStatus(taskId, stepId, newStatus) // stepId is string
+      await updateStepStatus(taskId, stepId, newStatus)
 
       const updateStepsRecursive = (steps: Step[]): Step[] => {
         return steps.map((step) => {
           if (step.id === stepId) {
-            // Both are strings
             return { ...step, status: newStatus }
           }
-          // Step type does not have subSteps
           return step
         })
       }
@@ -546,14 +503,12 @@ const TaskProgressPage: React.FC = () => {
               newOverallStatus = stepTask.status
             }
 
-            // Helper to convert Step to StepDTO
             const toStepDTO = (step: Step): StepDTO => ({
               id: step.id,
               title: step.title,
               description: step.description,
               status: step.status,
               order: step.order,
-              // validationScore is on StepDTO, not Step. Add if needed or handle.
             })
 
             return {
@@ -567,7 +522,7 @@ const TaskProgressPage: React.FC = () => {
               stepTaskDetail: stepTask.stepTaskDetail
                 ? {
                     ...stepTask.stepTaskDetail,
-                    steps: updatedSteps.map(toStepDTO), // Convert Step[] to StepDTO[]
+                    steps: updatedSteps.map(toStepDTO),
                     completedSteps: updatedSteps.filter(
                       (s) => s.status === 'DONE',
                     ).length,
@@ -581,16 +536,7 @@ const TaskProgressPage: React.FC = () => {
           return task
         })
       }
-
       setTasks(updateTaskInState)
-      setStepTasks((prevStepTasks) =>
-        prevStepTasks.map((task) =>
-          task.id === taskId
-            ? (updateTaskInState([task])[0] as StepTask)
-            : task,
-        ),
-      )
-
       message.success('步骤状态更新成功！')
     } catch (error) {
       message.error('更新步骤状态失败，请重试。')
@@ -638,9 +584,6 @@ const TaskProgressPage: React.FC = () => {
           setActiveTab(key)
           if (key === 'overview') {
             setSelectedTaskForDetailView(null)
-          } else {
-            const task = tasks.find((t) => t.id.toString() === key)
-            setSelectedTaskForDetailView(task || null)
           }
         }}
       >
@@ -665,60 +608,6 @@ const TaskProgressPage: React.FC = () => {
                     <Statistic
                       title="总任务数 (筛选范围内)"
                       value={taskStats.total}
-                    />
-                  </Card>
-                </Col>
-                <Col
-                  xs={24}
-                  sm={12}
-                  md={8}
-                  lg={6}
-                >
-                  <Card hoverable>
-                    <Statistic
-                      title="已完成 (筛选范围内)"
-                      value={taskStats.completed}
-                      valueStyle={{ color: '#3f8600' }}
-                    />
-                    <Progress
-                      percent={
-                        taskStats.total
-                          ? Math.round(
-                              ((taskStats.completed || 0) / taskStats.total) *
-                                100,
-                            )
-                          : 0
-                      }
-                      status="active"
-                      strokeColor={{ from: '#108ee9', to: '#87d068' }}
-                    />
-                  </Card>
-                </Col>
-                <Col
-                  xs={24}
-                  sm={12}
-                  md={8}
-                  lg={6}
-                >
-                  <Card hoverable>
-                    <Statistic
-                      title="进行中 (筛选范围内)"
-                      value={taskStats.inProgress}
-                      valueStyle={{ color: '#d48806' }}
-                    />
-                  </Card>
-                </Col>
-                <Col
-                  xs={24}
-                  sm={12}
-                  md={8}
-                  lg={6}
-                >
-                  <Card hoverable>
-                    <Statistic
-                      title="平均耗时 (已完成)"
-                      value={taskStats.avgTimeSpent}
-                      suffix="分钟"
                     />
                   </Card>
                 </Col>
@@ -905,7 +794,10 @@ const TaskProgressPage: React.FC = () => {
                     <Calendar
                       fullscreen={false}
                       onSelect={(date) =>
-                        setActiveTab(date.format('YYYY-MM-DD'))
+                        console.log(
+                          'Date selected on calendar:',
+                          date.format('YYYY-MM-DD'),
+                        )
                       }
                       cellRender={cellRender}
                       value={dateRange ? dateRange[0] : dayjs()}
@@ -934,24 +826,15 @@ const TaskProgressPage: React.FC = () => {
             preloadedTasks={tasks}
             onTaskSelect={(task: Task) => {
               setSelectedTaskForDetailView(task)
-              setActiveTab(task.id.toString())
             }}
             onTabChange={(tabKey) => {
-              setActiveTab(tabKey)
-              if (
-                tabKey === 'overview' ||
-                !tasks.find((t) => t.id.toString() === tabKey)
-              ) {
-                setSelectedTaskForDetailView(null)
-              } else {
-                const task = tasks.find((t) => t.id.toString() === tabKey)
-                setSelectedTaskForDetailView(task || null)
-              }
+              console.log('ProgressTracker internal tab changed to:', tabKey)
             }}
             onCheckIn={handleHabitCheckIn}
             loadingTaskIds={loadingTaskIds}
             onStepUpdate={handleStepUpdate}
             onTaskUpdate={handleTaskUpdate}
+            manageTasksPath="/objectives"
           />
         </TabPane>
       </Tabs>

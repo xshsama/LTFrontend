@@ -17,6 +17,7 @@ import {
 } from 'antd'
 import dayjs from 'dayjs'
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom' // Added Link import
 import {
   addFeedbackToCreativeTask,
   addVersionToCreativeTask,
@@ -38,13 +39,16 @@ const { Option } = Select
 
 interface CreativeTaskDetailsProps {
   task: CreativeTask
-  onUpdate: (updatedTask: Task) => void // Callback to update task list in parent
+  onUpdate: (updatedTask: Task) => void
+  manageTasksPath?: string // New prop for navigation path
 }
 
 const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
   task,
   onUpdate,
+  manageTasksPath, // Destructure new prop
 }) => {
+  const isCompleted = task.status === 'COMPLETED'
   const [isEditingPhase, setIsEditingPhase] = useState(false)
   const [currentPhase, setCurrentPhase] = useState(task.currentPhase)
   const [isAddingVersion, setIsAddingVersion] = useState(false)
@@ -180,14 +184,26 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
       style={{ width: '100%' }}
       size="large"
     >
+      <Card
+        title="创作任务详情"
+        extra={
+          <Link to={manageTasksPath || '/tasks'}>
+            <Button>管理任务列表</Button>
+          </Link>
+        }
+      >
+        {/* You can add general task info here if needed, or directly go to sections */}
+      </Card>
+
       <Card title="创作阶段管理">
         <Space>
           <Text>当前阶段: </Text>
-          {isEditingPhase ? (
+          {isEditingPhase && !isCompleted ? (
             <Select
               value={currentPhase}
               onChange={handlePhaseChange}
               style={{ width: 150 }}
+              disabled={isCompleted}
             >
               <Option value="DRAFTING">草稿阶段</Option>
               <Option value="REVIEWING">审阅阶段</Option>
@@ -209,8 +225,12 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
           <Button
             icon={isEditingPhase ? <SaveOutlined /> : <EditOutlined />}
             onClick={() => setIsEditingPhase(!isEditingPhase)}
+            disabled={
+              isCompleted ||
+              (isEditingPhase && currentPhase === task.currentPhase)
+            } // Disable save if no change or completed
           >
-            {isEditingPhase ? '保存' : '修改阶段'}
+            {isEditingPhase ? '保存阶段' : '修改阶段'}
           </Button>
         </Space>
       </Card>
@@ -221,12 +241,13 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
           <Button
             icon={isEditingSettings ? <SaveOutlined /> : <EditOutlined />}
             onClick={() => setIsEditingSettings(!isEditingSettings)}
+            disabled={isCompleted}
           >
             {isEditingSettings ? '保存设置' : '编辑设置'}
           </Button>
         }
       >
-        {isEditingSettings ? (
+        {isEditingSettings && !isCompleted ? (
           <Form
             form={settingsForm}
             layout="vertical"
@@ -246,13 +267,17 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
                 mode="tags"
                 placeholder="例如: PDF, EPUB, HTML"
                 tokenSeparators={[',']}
+                disabled={isCompleted}
               />
             </Form.Item>
             <Form.Item
               name="licenseType"
               label="许可证类型"
             >
-              <Select placeholder="选择许可证">
+              <Select
+                placeholder="选择许可证"
+                disabled={isCompleted}
+              >
                 <Option value="CC_BY">CC BY (署名)</Option>
                 <Option value="ALL_RIGHTS_RESERVED">保留所有权利</Option>
               </Select>
@@ -261,6 +286,7 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
               <Button
                 type="primary"
                 htmlType="submit"
+                disabled={isCompleted}
               >
                 保存设置
               </Button>
@@ -303,6 +329,7 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
             icon={<PlusOutlined />}
             onClick={() => setIsAddingVersion(true)}
             style={{ marginBottom: 16 }}
+            disabled={isCompleted}
           >
             添加新版本
           </Button>
@@ -342,6 +369,7 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
             icon={<PlusOutlined />}
             onClick={() => setIsAddingFeedback(true)}
             style={{ marginBottom: 16 }}
+            disabled={isCompleted}
           >
             添加反馈
           </Button>
@@ -399,19 +427,23 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
             label="内容快照/存储链接"
             rules={[{ required: true, message: '请输入快照或链接' }]}
           >
-            <Input />
+            <Input disabled={isCompleted} />
           </Form.Item>
           <Form.Item
             name="changes"
             label="变更描述 (每行一条)"
             rules={[{ required: true, message: '请输入变更描述' }]}
           >
-            <Input.TextArea rows={4} />
+            <Input.TextArea
+              rows={4}
+              disabled={isCompleted}
+            />
           </Form.Item>
           <Form.Item>
             <Button
               type="primary"
               htmlType="submit"
+              disabled={isCompleted}
             >
               提交版本
             </Button>
@@ -435,32 +467,45 @@ const CreativeTaskDetails: React.FC<CreativeTaskDetailsProps> = ({
             name="userId"
             label="审阅者ID (可选)"
           >
-            <Input placeholder="您的用户ID或昵称" />
+            <Input
+              placeholder="您的用户ID或昵称"
+              disabled={isCompleted}
+            />
           </Form.Item>
           <Form.Item
             name="creativityRating"
             label="创意评分"
             rules={[{ required: true, message: '请选择创意评分' }]}
           >
-            <Rate count={5} />
+            <Rate
+              count={5}
+              disabled={isCompleted}
+            />
           </Form.Item>
           <Form.Item
             name="logicRating"
             label="逻辑评分"
             rules={[{ required: true, message: '请选择逻辑评分' }]}
           >
-            <Rate count={5} />
+            <Rate
+              count={5}
+              disabled={isCompleted}
+            />
           </Form.Item>
           <Form.Item
             name="comments"
             label="评论内容"
           >
-            <Input.TextArea rows={4} />
+            <Input.TextArea
+              rows={4}
+              disabled={isCompleted}
+            />
           </Form.Item>
           <Form.Item>
             <Button
               type="primary"
               htmlType="submit"
+              disabled={isCompleted}
             >
               提交反馈
             </Button>
