@@ -1,15 +1,16 @@
 import { Tag, Timeline, Typography } from 'antd'
 import dayjs from 'dayjs'
 import React from 'react'
-import { Task } from '../types/task'
+import { CreativeTask } from '../types/task' // Changed from Task to CreativeTask
 
 const { Text } = Typography
 
 interface GanttChartProps {
-  tasks: Task[]
+  tasks: CreativeTask[] // Changed from Task[] to CreativeTask[]
+  onTaskClick?: (task: CreativeTask) => void // Callback when a task item is clicked
 }
 
-const GanttChart: React.FC<GanttChartProps> = ({ tasks }) => {
+const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -31,13 +32,18 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks }) => {
           label={dayjs(task.createdAt).format('YYYY-MM-DD')}
           color={getStatusColor(task.status)}
         >
-          <Text strong>{task.title}</Text>
-          <Tag
-            color={getStatusColor(task.status)}
-            style={{ marginLeft: 8 }}
+          <div
+            onClick={() => onTaskClick?.(task)}
+            style={{ cursor: onTaskClick ? 'pointer' : 'default' }}
           >
-            {task.status}
-          </Tag>
+            <Text strong>{task.title}</Text>
+            <Tag
+              color={getStatusColor(task.status)}
+              style={{ marginLeft: 8 }}
+            >
+              {task.status}
+            </Tag>
+          </div>
         </Timeline.Item>
       ))}
     </Timeline>

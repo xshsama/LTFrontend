@@ -1,5 +1,5 @@
 // filepath: /Users/xshsama/code/LearningTracker/frontend/src/components/tables/TasksTable.tsx
-import { CheckOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import { CheckOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons' // Added CalendarOutlined
 import {
   Button,
   Popconfirm,
@@ -14,9 +14,9 @@ import {
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React, { useMemo, useState } from 'react'
-import { deleteTask, updateTask } from '../../services/taskService'
+import { deleteTask, updateTask } from '../../services/taskService' // Added checkInHabitTask
 import '../../styles/tables.css'
-import { Task } from '../../types/task'
+import { StepTask, Task } from '../../types/task' // Import StepTask
 
 import { Tag as TagType } from '../../types/tag' // Import Tag type
 const { Link } = Typography
@@ -174,11 +174,11 @@ const TasksTable: React.FC<TasksTableProps> = ({
   React.useEffect(() => {
     const processAndUpdateTasks = async () => {
       const updatedTasksPromises = data.map(async (task) => {
+        const stepTaskDetail = (task as StepTask).stepTaskDetail
         if (
           task.type === 'STEP' &&
-          task.steps &&
-          task.steps.every((step) => step.status === 'DONE') &&
-          // 使用 includes 来避免 TypeScript 对联合类型的过度缩小判断
+          stepTaskDetail?.steps &&
+          stepTaskDetail.steps.every((step) => step.status === 'DONE') &&
           !(task.status === 'COMPLETED' || task.status === 'ARCHIVED')
         ) {
           // 当步骤任务所有步骤完成时，调用 updateTask 更新后端
@@ -346,18 +346,21 @@ const TasksTable: React.FC<TasksTableProps> = ({
       key: 'action',
       width: 150,
       className: 'action-column',
+      // Reverted render logic for Actions column
       render: (_, record: Task) => (
         <Space size="small">
+          {/* Generic Mark Complete Button */}
           {record.status !== 'ARCHIVED' && record.status !== 'COMPLETED' && (
             <Tooltip title="标记为已完成">
               <Button
                 type="link"
                 size="small"
                 icon={<CheckOutlined />}
-                onClick={(e) => handleStatusChange(e, record.id!, 'ARCHIVED')}
+                onClick={(e) => handleStatusChange(e, record.id!, 'COMPLETED')} // Using COMPLETED status
               />
             </Tooltip>
           )}
+          {/* Edit Button */}
           <Tooltip title="编辑任务">
             <Button
               type="link"
@@ -366,6 +369,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
               onClick={(e) => handleEdit(e, record)}
             />
           </Tooltip>
+          {/* Delete Button with Popconfirm */}
           <Popconfirm
             title="确定要删除这个任务吗?"
             description="删除后不可恢复"
@@ -374,13 +378,15 @@ const TasksTable: React.FC<TasksTableProps> = ({
             cancelText="取消"
             onCancel={(e) => e?.stopPropagation()}
           >
-            <Button
-              type="link"
-              danger
-              size="small"
-              icon={<DeleteOutlined />}
-              onClick={(e) => e.stopPropagation()}
-            />
+            <Tooltip title="删除任务">
+              <Button
+                type="link"
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),

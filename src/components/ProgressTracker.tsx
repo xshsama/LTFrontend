@@ -6,10 +6,12 @@ import {
   getAllStepTasks,
   getAllTasks,
 } from '../services/taskService'
-import { Task } from '../types/task'
-import GanttChart from './GanttChart'
+import { CreativeTask, HabitTask, StepTask, Task } from '../types/task'
+import CreativeTaskDetails from './CreativeTaskDetails' // Import CreativeTaskDetails
 import HabitTracker from './HabitTracker'
 import TodoList from './TodoList'
+// GanttChart is no longer used
+// import GanttChart from './GanttChart';
 
 const { TabPane } = Tabs
 
@@ -17,43 +19,66 @@ interface ProgressTrackerProps {
   selectedTaskType?: 'ALL' | 'STEP' | 'HABIT' | 'CREATIVE'
   preloadedTasks?: Task[]
   onTabChange?: (tabKey: string) => void
+  onCheckIn: (taskId: number) => Promise<void>
+  loadingTaskIds?: Set<number>
+  onDataRefreshed?: () => void
+  onTaskSelect?: (task: Task) => void
+  onStepUpdate?: (
+    taskId: number,
+    stepId: string,
+    newStatus: 'PENDING' | 'DONE',
+  ) => Promise<void>
+  onTaskUpdate?: (updatedTask: Task) => void // Added onTaskUpdate for CreativeTaskDetails
 }
 
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   selectedTaskType = 'ALL',
   preloadedTasks,
   onTabChange,
+  onCheckIn,
+  loadingTaskIds,
+  onDataRefreshed,
+  onTaskSelect,
+  onStepUpdate,
+  onTaskUpdate, // Destructure onTaskUpdate
 }) => {
   const [tasks, setTasks] = React.useState<Task[]>(preloadedTasks || [])
   const [loading, setLoading] = React.useState(!preloadedTasks)
-  const [activeTabKey, setActiveTabKey] = React.useState('1')
+  const [activeTabKey, setActiveTabKey] = React.useState('1') // Default to first tab
 
-  // 添加刷新数据方法
   const refreshTasks = React.useCallback(async () => {
     setLoading(true)
     try {
       let data: Task[] = []
-
-      // 根据选定的任务类型调用相应的API
-      switch (selectedTaskType) {
-        case 'STEP':
-          console.log('ProgressTracker: 刷新步骤型任务')
-          data = await getAllStepTasks()
-          break
-        case 'HABIT':
-          console.log('ProgressTracker: 刷新习惯型任务')
-          data = await getAllHabitTasks()
-          break
-        case 'CREATIVE':
-          console.log('ProgressTracker: 刷新创意型任务')
-          data = await getAllCreativeTasks()
-          break
-        default:
-          console.log('ProgressTracker: 刷新所有任务')
-          data = await getAllTasks()
-          break
+      // Since TaskProgressPage now passes all tasks via preloadedTasks,
+      // selectedTaskType based fetching within ProgressTracker might become redundant
+      // if preloadedTasks is always provided and up-to-date.
+      // For now, keeping the internal fetching logic as a fallback or if preloadedTasks is not given.
+      if (preloadedTasks) {
+        // If preloadedTasks are provided, use them directly, no need to fetch by type here
+        // However, if a refresh is needed independent of preloadedTasks, this logic might still be useful.
+        // Consider if refreshTasks should always call getAllTasks or respect selectedTaskType.
+        // Given TaskProgressPage's changes, getAllTasks is more consistent.
+        console.log(
+          'ProgressTracker: Refreshing all tasks as preloadedTasks are primary source',
+        )
+        data = await getAllTasks()
+      } else {
+        switch (selectedTaskType) {
+          case 'STEP':
+            data = await getAllStepTasks()
+            break
+          case 'HABIT':
+            data = await getAllHabitTasks()
+            break
+          case 'CREATIVE':
+            data = await getAllCreativeTasks()
+            break
+          default:
+            data = await getAllTasks()
+            break
+        }
       }
-
       setTasks(data)
       message.success('数据已刷新')
     } catch (error) {
@@ -61,84 +86,55 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       message.error('刷新任务列表失败')
     } finally {
       setLoading(false)
+      onDataRefreshed?.()
     }
-  }, [selectedTaskType])
+  }, [selectedTaskType, onDataRefreshed, preloadedTasks]) // Added preloadedTasks to dependency
 
-  // 根据选定的任务类型决定加载哪种任务
   React.useEffect(() => {
-    // 如果已经有预加载的任务，就不需要再获取
     if (preloadedTasks) {
       setTasks(preloadedTasks)
       setLoading(false)
-      return
-    }
-
-    const fetchTasks = async () => {
-      setLoading(true)
-      try {
-        let data: Task[] = []
-
-        // 根据选定的任务类型调用相应的API
-        switch (selectedTaskType) {
-          case 'STEP':
-            console.log('ProgressTracker: 获取步骤型任务')
-            data = await getAllStepTasks()
-            break
-          case 'HABIT':
-            console.log('ProgressTracker: 获取习惯型任务')
-            data = await getAllHabitTasks()
-            break
-          case 'CREATIVE':
-            console.log('ProgressTracker: 获取创意型任务')
-            data = await getAllCreativeTasks()
-            break
-          default:
-            console.log('ProgressTracker: 获取所有任务')
-            data = await getAllTasks()
-            break
+    } else if (!preloadedTasks && selectedTaskType) {
+      // Only fetch if no preloaded tasks
+      const fetchTasksByType = async () => {
+        setLoading(true)
+        try {
+          let data: Task[] = []
+          switch (selectedTaskType) {
+            case 'STEP':
+              data = await getAllStepTasks()
+              break
+            case 'HABIT':
+              data = await getAllHabitTasks()
+              break
+            case 'CREATIVE':
+              data = await getAllCreativeTasks()
+              break
+            default: // 'ALL' or undefined
+              data = await getAllTasks()
+              break
+          }
+          setTasks(data)
+        } catch (error) {
+          message.error('获取任务列表失败')
+        } finally {
+          setLoading(false)
         }
-
-        setTasks(data)
-      } catch (error) {
-        console.error('ProgressTracker: 获取任务失败', error)
-        message.error('获取任务列表失败')
-      } finally {
-        setLoading(false)
       }
+      fetchTasksByType()
     }
-
-    fetchTasks()
   }, [selectedTaskType, preloadedTasks])
 
-  // 根据任务类型过滤任务
-  const habitTasks = tasks.filter((t) => t.type === 'HABIT')
-  const stepTasks = tasks.filter((t) => t.type === 'STEP')
-  const creativeTasks = tasks.filter((t) => t.type === 'CREATIVE')
+  const habitTasks = tasks.filter((t): t is HabitTask => t.type === 'HABIT')
+  const stepTasks = tasks.filter((t): t is StepTask => t.type === 'STEP')
+  const creativeTasks = tasks.filter(
+    (t): t is CreativeTask => t.type === 'CREATIVE',
+  )
 
-  // 处理标签页变化
   const handleTabChange = (key: string) => {
     setActiveTabKey(key)
-
-    // 将选项卡变化通知到父组件
     if (onTabChange) {
       onTabChange(key)
-
-      // 根据标签页自动设置任务类型
-      let taskType: 'ALL' | 'STEP' | 'HABIT' | 'CREATIVE' = 'ALL'
-      switch (key) {
-        case '1':
-          taskType = 'HABIT'
-          break
-        case '2':
-          taskType = 'STEP'
-          break
-        case '3':
-          taskType = 'CREATIVE'
-          break
-      }
-
-      // 将任务类型变化通知给父组件 (可以通过父组件传入的回调函数实现)
-      console.log('ProgressTracker: 标签页切换，建议任务类型切换为:', taskType)
     }
   }
 
@@ -157,7 +153,12 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
           tab="习惯打卡"
           key="1"
         >
-          <HabitTracker tasks={habitTasks} />
+          <HabitTracker
+            tasks={habitTasks}
+            onCheckIn={onCheckIn}
+            loadingTaskIds={loadingTaskIds}
+            onTaskSelect={onTaskSelect}
+          />
         </TabPane>
         <TabPane
           tab="步骤清单"
@@ -165,14 +166,23 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         >
           <TodoList
             tasks={stepTasks}
-            onTaskUpdate={refreshTasks}
+            onTaskUpdate={refreshTasks} // This can be used to trigger a refresh of ProgressTracker's tasks
+            onTaskSelect={onTaskSelect}
+            onStepUpdate={onStepUpdate}
           />
         </TabPane>
         <TabPane
           tab="创作计划"
           key="3"
         >
-          <GanttChart tasks={creativeTasks} />
+          {creativeTasks.length > 0 && onTaskUpdate ? (
+            <CreativeTaskDetails
+              task={creativeTasks[0]} // Displaying the first creative task
+              onUpdate={onTaskUpdate} // Pass the onTaskUpdate prop from parent
+            />
+          ) : (
+            <p>暂无创作任务或更新处理器未提供。</p> // Fallback if no creative tasks or onTaskUpdate is missing
+          )}
         </TabPane>
       </Tabs>
     </Card>

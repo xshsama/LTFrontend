@@ -273,6 +273,51 @@ export const clearTaskTags = async (taskId: number): Promise<void> => {
         throw error;
     }
 };
+// ===== 习惯任务打卡 =====
+
+// 执行习惯任务打卡
+export const checkInHabitTask = async (id: number): Promise<Task> => {
+    try {
+        console.log(`正在发送习惯任务 (ID: ${id}) 打卡请求...`);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.error(`习惯任务 (ID: ${id}) 打卡失败: 未找到认证令牌`);
+            throw new Error('认证失败，请重新登录');
+        }
+        // Check-in typically doesn't require a request body
+        const response = await apiClient.post(`/api/tasks/${id}/check-in`, null, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        console.log(`习惯任务 (ID: ${id}) 打卡成功:`, response.data);
+        // Assuming the backend returns the updated task DTO
+        // Need to ensure the returned data structure matches the Task type
+        // Perform necessary checks or transformations if needed
+        if (response.data && typeof response.data === 'object') {
+            // Basic check, might need more specific validation based on Task type
+            return response.data as Task;
+        } else {
+            console.error('打卡API返回格式不符合预期:', response.data);
+            throw new Error('打卡成功，但未能获取更新后的任务数据');
+        }
+    } catch (error: any) {
+        console.error(`习惯任务 (ID: ${id}) 打卡失败:`, error.response?.status, error.response?.data || error.message);
+        let errorMessage = '打卡失败';
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.response?.status === 404) {
+            errorMessage = '任务未找到或非习惯任务';
+        } else if (error.response?.status === 409) { // Conflict for already checked in
+            errorMessage = '今日已打卡';
+        } else if (error.response?.status === 403) {
+            errorMessage = '权限不足';
+        } else if (error.response?.status === 401) {
+            errorMessage = '认证已过期，请重新登录';
+        }
+        throw new Error(errorMessage);
+    }
+};
 
 // 获取所有习惯型任务
 export const getAllHabitTasks = async (): Promise<HabitTask[]> => {
@@ -364,6 +409,55 @@ export const getCreativeTaskById = async (id: number): Promise<CreativeTask | nu
         return null;
     } catch (error) {
         console.error(`获取创意型任务(ID:${id})失败:`, error);
+        throw error;
+    }
+};
+// ===== 创意型任务特有方法 =====
+
+// 更新创意任务阶段
+export const updateCreativeTaskPhase = async (id: number, phase: 'DRAFTING' | 'REVIEWING' | 'FINALIZING'): Promise<CreativeTask | null> => {
+    try {
+        const response = await apiClient.put(`/api/tasks/creative/${id}/phase`, { phase });
+        if (response.data && response.data.data) {
+            return response.data.data;
+        } else if (response.data) {
+            return response.data;
+        }
+        return null;
+    } catch (error) {
+        console.error(`更新创意任务(ID:${id})阶段失败:`, error);
+        throw error;
+    }
+};
+
+// 为创意任务添加版本
+export const addVersionToCreativeTask = async (id: number, versionData: { snapshot: string; changes: string[] }): Promise<CreativeTask | null> => {
+    try {
+        const response = await apiClient.post(`/api/tasks/creative/${id}/version`, versionData); // Changed 'versions' to 'version'
+        if (response.data && response.data.data) {
+            return response.data.data;
+        } else if (response.data) {
+            return response.data;
+        }
+        return null;
+    } catch (error) {
+        console.error(`为创意任务(ID:${id})添加版本失败:`, error);
+        throw error;
+    }
+};
+
+// 为创意任务添加反馈
+export const addFeedbackToCreativeTask = async (id: number, feedbackData: { userId: string; creativityRating: number; logicRating: number; comments?: string }): Promise<CreativeTask | null> => {
+    try {
+        const response = await apiClient.post(`/api/tasks/creative/${id}/feedback`, feedbackData);
+        if (response.data && response.data.data) {
+            return response.data.data;
+        } else if (response.data) {
+            return response.data;
+        }
+        return null;
+    } catch (error) {
+        console.error(`为创意任务(ID:${id})添加反馈失败:`, error);
         throw error;
     }
 };

@@ -65,14 +65,59 @@ export interface CompletionRule {
     }
 }
 
+// Define types corresponding to backend HabitTask enums and DTOs
+export type CheckinStatus = 'DONE' | 'SKIP' | 'PARTIAL';
+
+export interface CheckInRecordDTO {
+    date: string; // Assuming ISO date string from backend (LocalDate)
+    status: CheckinStatus;
+    notes?: string;
+}
+
+export interface HabitTaskDetailDTO {
+    frequency?: string;
+    daysOfWeek?: string; // JSON string
+    customPattern?: string;
+    currentStreak?: number;
+    longestStreak?: number;
+    lastCompleted?: string | null; // Assuming ISO date string or null from backend (LocalDate)
+    checkInRecords?: CheckInRecordDTO[];
+}
+
 export interface HabitTask extends BaseTask {
-    type: 'HABIT'
-    frequency: string
-    daysOfWeek?: string
-    currentStreak?: number
-    longestStreak?: number
-    lastCompleted?: Date
-    checkinsJson?: string
+    type: 'HABIT';
+    // For nested structure (TaskDTO from backend)
+    habitTaskDetail?: HabitTaskDetailDTO;
+
+    // Optional top-level fields for flat structure (HabitTaskDTO from backend)
+    // These mirror fields in HabitTaskDetailDTO and HabitTaskDTO.java
+    frequency?: string;
+    daysOfWeek?: string; // JSON string, matches HabitTaskDetailDTO and HabitTaskDTO.java
+    customPattern?: string; // Matches HabitTaskDetailDTO and HabitTaskDTO.java
+    currentStreak?: number; // Matches HabitTaskDetailDTO and HabitTaskDTO.java
+    longestStreak?: number; // Matches HabitTaskDetailDTO and HabitTaskDTO.java
+    lastCompleted?: string | null; // Matches HabitTaskDetailDTO (string | null for LocalDate)
+    checkInRecords?: CheckInRecordDTO[]; // Matches HabitTaskDetailDTO and HabitTaskDTO.java
+}
+
+// DTOs for CreativeTask versions and feedback
+export interface CreativeVersionDTO {
+    versionId?: string; // Matches backend CreativeTask.Version.versionId (if it were a DTO field)
+    timestamp?: string; // Matches backend CreativeTask.Version.timestamp (LocalDateTime becomes string)
+    // Or CreativeTaskDTO.VersionDTO.createdAt (LocalDateTime becomes string)
+    snapshot?: string;  // Matches both
+    changes?: string[]; // Matches backend CreativeTask.Version.changes (List<String>)
+    // Backend CreativeTaskDTO.VersionDTO.changes is 'string', this needs alignment if DTO is primary source.
+    // Assuming entity's List<String> is more direct for 'versionsJson' content.
+}
+
+export interface CreativeFeedbackDTO {
+    userId?: string; // Matches backend CreativeTask.Feedback.userId (if it were a DTO field)
+    // Or CreativeTaskDTO.FeedbackDTO.userId (Integer, but string might be safer for frontend if user IDs can be non-numeric)
+    // Let's assume string for flexibility, or align with backend DTO if strictly integer.
+    creativityRating?: number; // Matches both
+    logicRating?: number;    // Matches both
+    comments?: string;       // Matches both
 }
 
 export interface CreativeTask extends BaseTask {
@@ -80,8 +125,11 @@ export interface CreativeTask extends BaseTask {
     currentPhase: 'DRAFTING' | 'REVIEWING' | 'FINALIZING'
     publicationFormats?: string
     licenseType?: string
-    versionsJson?: string
-    feedbacksJson?: string
+    validationScore?: number; // Added field
+    versionsJson?: string     // Raw JSON from backend
+    feedbacksJson?: string    // Raw JSON from backend
+    versions?: CreativeVersionDTO[];   // Parsed versions
+    feedbacks?: CreativeFeedbackDTO[]; // Parsed feedbacks
 }
 
 export type Task = StepTask | HabitTask | CreativeTask

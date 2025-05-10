@@ -9,58 +9,94 @@ import {
   Calendar,
   Card,
   Col,
+  Collapse,
   DatePicker,
   Divider,
   Empty,
   Progress,
   Result,
   Row,
-  Select,
   Space,
+  Spin,
   Statistic,
   Tabs,
   Tag,
   Timeline,
-  Tooltip,
   Typography,
   message,
 } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
+import isBetween from 'dayjs/plugin/isBetween'
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProgressTracker from '../components/ProgressTracker'
 import { useAuth } from '../contexts/AuthContext'
-import { getGoals } from '../services/goalService'
 import {
-  getAllCreativeTasks,
-  getAllHabitTasks,
-  getAllStepTasks,
+  checkInHabitTask,
   getAllTasks,
-  getTasksByGoal,
   updateStepStatus,
 } from '../services/taskService'
-import { Goal } from '../types/goals'
-import { CreativeTask, HabitTask, StepTask, Task } from '../types/task'
+import {
+  CheckInRecordDTO,
+  CreativeTask,
+  HabitTask,
+  Step, // Step type for frontend manipulation
+  StepDTO, // StepDTO for backend interaction / initial detail
+  StepTask,
+  Task,
+} from '../types/task'
+
+dayjs.extend(isBetween)
+
+interface TimelineTaskItem {
+  id: number
+  title: string
+  status: Task['status']
+  type: Task['type']
+  completionDate?: Date
+  actualTimeMinutes?: number
+  steps?: Step[] // Changed from StepTask['steps'] to Step[] for clarity
+  timelineItemType: 'TASK_COMPLETION'
+  timelineDate: Date
+  originalTaskData: Task
+}
+
+interface TimelineCheckInItem {
+  id: string
+  title: string
+  timelineItemType: 'HABIT_CHECK_IN'
+  timelineDate: Date
+  taskType: 'HABIT'
+  originalTask?: HabitTask
+  checkInNote?: string
+}
+
+type TimelineItem = TimelineTaskItem | TimelineCheckInItem
+type StepItemType = Step // Used for mapping in Timeline
 
 const { Title, Text, Paragraph } = Typography
 const { TabPane } = Tabs
 const { RangePicker } = DatePicker
 
-// 定义任务数据统计类型
 interface TaskStats {
   total: number
-  completed: number
-  inProgress: number
-  notStarted: number
-  overdue: number
-  completionRate: number
-  avgTimeSpent: number
+  completed?: number
+  inProgress?: number
+  notStarted?: number
+  overdue?: number
+  completionRate?: number
+  avgTimeSpent?: number
+  totalTasksAllTypes?: number
+  stepTaskCompletionRateAll?: number
+  habitTaskAverageCurrentStreakAll?: number
+  habitTaskCurrentStreak?: number
+  habitTaskAverageLongestStreak?: number
+  creativeTaskAveragePhase?: number
 }
 
-// 辅助函数：计算日期之间的差距（天数）
 const daysBetween = (date1: Date, date2: Date): number => {
-  const oneDay = 24 * 60 * 60 * 1000 // 一天的毫秒数
+  const oneDay = 24 * 60 * 60 * 1000
   return Math.round(Math.abs((date1.getTime() - date2.getTime()) / oneDay))
 }
 
@@ -68,181 +104,103 @@ const TaskProgressPage: React.FC = () => {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  // 状态管理
   const [tasks, setTasks] = useState<Task[]>([])
   const [stepTasks, setStepTasks] = useState<StepTask[]>([])
   const [habitTasks, setHabitTasks] = useState<HabitTask[]>([])
   const [creativeTasks, setCreativeTasks] = useState<CreativeTask[]>([])
-  const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string>('overview')
-  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null)
-  const [selectedTaskType, setSelectedTaskType] = useState<
-    'ALL' | 'STEP' | 'HABIT' | 'CREATIVE'
-  >('ALL')
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(30, 'day'),
     dayjs(),
   ])
+  const [loadingTaskIds, setLoadingTaskIds] = useState<Set<number>>(new Set())
+  const [selectedTaskForDetailView, setSelectedTaskForDetailView] =
+    useState<Task | null>(null)
 
-  // 状态管理变量
+  const handleTaskUpdate = (updatedTask: Task) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
+    )
+    if (
+      selectedTaskForDetailView &&
+      selectedTaskForDetailView.id === updatedTask.id
+    ) {
+      setSelectedTaskForDetailView(updatedTask)
+    }
+    if (updatedTask.type === 'CREATIVE') {
+      setCreativeTasks((prev) =>
+        prev.map((t) =>
+          t.id === updatedTask.id ? (updatedTask as CreativeTask) : t,
+        ),
+      )
+    } else if (updatedTask.type === 'STEP') {
+      setStepTasks((prev) =>
+        prev.map((t) =>
+          t.id === updatedTask.id ? (updatedTask as StepTask) : t,
+        ),
+      )
+    } else if (updatedTask.type === 'HABIT') {
+      setHabitTasks((prev) =>
+        prev.map((t) =>
+          t.id === updatedTask.id ? (updatedTask as HabitTask) : t,
+        ),
+      )
+    }
+  }
 
-  // 获取任务和目标数据
   useEffect(() => {
-    console.log('任务类型useEffect触发，当前选择的类型:', selectedTaskType)
-
     const fetchData = async () => {
       setLoading(true)
       try {
-        // 获取目标数据
-        const goalsData = await getGoals()
-        setGoals(goalsData)
-
-        // 根据选择的任务类型获取任务数据
-        let tasksData: Task[] = []
-
-        switch (selectedTaskType) {
-          case 'STEP':
-            console.log('正在调用步骤型任务API...')
-            const stepData = await getAllStepTasks()
-            console.log('获取到步骤型任务数据:', stepData)
-            setStepTasks(stepData)
-            tasksData = stepData
-            break
-          case 'HABIT':
-            console.log('正在调用习惯型任务API...')
-            const habitData = await getAllHabitTasks()
-            console.log('获取到习惯型任务数据:', habitData)
-            setHabitTasks(habitData)
-            tasksData = habitData
-            break
-          case 'CREATIVE':
-            console.log('正在调用创意型任务API...')
-            const creativeData = await getAllCreativeTasks()
-            console.log('获取到创意型任务数据:', creativeData)
-            setCreativeTasks(creativeData)
-            tasksData = creativeData
-            break
-          default:
-            // 获取所有类型的任务
-            console.log('正在调用所有任务API...')
-            tasksData = await getAllTasks()
-            console.log('获取到所有任务数据:', tasksData)
-            break
-        }
-
+        const tasksData: Task[] = await getAllTasks()
         setTasks(tasksData)
+        setStepTasks(tasksData.filter((t) => t.type === 'STEP') as StepTask[])
+        setHabitTasks(
+          tasksData.filter((t) => t.type === 'HABIT') as HabitTask[],
+        )
+        setCreativeTasks(
+          tasksData.filter((t) => t.type === 'CREATIVE') as CreativeTask[],
+        )
       } catch (error) {
-        console.error('获取数据失败:', error)
-        message.error('获取任务和目标数据失败，请重试')
+        message.error('获取任务数据失败，请重试')
       } finally {
         setLoading(false)
       }
     }
-
     if (isAuthenticated) {
       fetchData()
     }
-  }, [isAuthenticated, selectedTaskType])
+  }, [isAuthenticated])
 
-  // 根据选择的目标筛选任务
-  useEffect(() => {
-    const fetchTasksByGoal = async () => {
-      if (!selectedGoalId) return
-
-      setLoading(true)
-      try {
-        // 当选择了特定目标时，我们还是使用通用的getTasksByGoal API
-        // 因为后端尚未提供按目标ID和任务类型同时筛选的API
-        const tasksData = await getTasksByGoal(selectedGoalId)
-
-        // 如果选择了特定任务类型，在前端进行过滤
-        if (selectedTaskType !== 'ALL') {
-          const filteredTasks = tasksData.filter(
-            (task) => task.type === selectedTaskType,
-          )
-          setTasks(filteredTasks)
-        } else {
-          setTasks(tasksData)
-        }
-      } catch (error) {
-        console.error(`获取目标(ID:${selectedGoalId})的任务列表失败:`, error)
-        message.error('获取任务数据失败，请重试！')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (isAuthenticated && selectedGoalId) {
-      fetchTasksByGoal()
-    }
-  }, [isAuthenticated, selectedGoalId, selectedTaskType])
-
-  // 刷新数据
   const refreshData = async () => {
     setLoading(true)
     try {
-      if (selectedGoalId) {
-        // 当有选择目标时，使用目标筛选API
-        const tasksData = await getTasksByGoal(selectedGoalId)
-
-        // 如果同时选择了特定任务类型，在前端进行过滤
-        if (selectedTaskType !== 'ALL') {
-          const filteredTasks = tasksData.filter(
-            (task) => task.type === selectedTaskType,
-          )
-          setTasks(filteredTasks)
-        } else {
-          setTasks(tasksData)
-        }
-      } else {
-        // 没有选择目标时，根据选择的任务类型获取任务
-        let tasksData: Task[] = []
-
-        switch (selectedTaskType) {
-          case 'STEP':
-            const stepData = await getAllStepTasks()
-            setStepTasks(stepData)
-            tasksData = stepData
-            break
-          case 'HABIT':
-            const habitData = await getAllHabitTasks()
-            setHabitTasks(habitData)
-            tasksData = habitData
-            break
-          case 'CREATIVE':
-            const creativeData = await getAllCreativeTasks()
-            setCreativeTasks(creativeData)
-            tasksData = creativeData
-            break
-          default:
-            // 获取所有类型的任务
-            tasksData = await getAllTasks()
-            break
-        }
-
-        setTasks(tasksData)
-      }
+      const tasksData: Task[] = await getAllTasks()
+      setTasks(tasksData)
+      setStepTasks(tasksData.filter((t) => t.type === 'STEP') as StepTask[])
+      setHabitTasks(tasksData.filter((t) => t.type === 'HABIT') as HabitTask[])
+      setCreativeTasks(
+        tasksData.filter((t) => t.type === 'CREATIVE') as CreativeTask[],
+      )
       message.success('数据已刷新')
     } catch (error) {
-      console.error('刷新数据失败:', error)
       message.error('刷新数据失败，请重试')
     } finally {
       setLoading(false)
     }
   }
 
-  // 处理日期范围变化
-  const handleDateRangeChange = (dates: [Dayjs, Dayjs] | null) => {
-    if (dates) {
-      setDateRange(dates)
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null,
+  ) => {
+    if (dates && dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]])
     }
   }
 
-  // 按日期范围过滤任务
   const filteredTasks = useMemo(() => {
     if (!dateRange || !tasks.length) return tasks
-
     const [startDate, endDate] = dateRange
     return tasks.filter((task) => {
       const updatedAt = dayjs(task.updatedAt)
@@ -250,119 +208,234 @@ const TaskProgressPage: React.FC = () => {
     })
   }, [tasks, dateRange])
 
-  // 计算任务统计数据
   const taskStats: TaskStats = useMemo(() => {
-    if (!filteredTasks.length) {
-      return {
-        total: 0,
-        completed: 0,
-        inProgress: 0,
-        notStarted: 0,
-        overdue: 0,
-        completionRate: 0,
-        avgTimeSpent: 0,
-      }
-    }
+    const initialStats: TaskStats = { total: 0, avgTimeSpent: 0 }
+    if (!tasks.length) return initialStats
 
-    const completed = filteredTasks.filter(
+    const currentTasksToConsider = filteredTasks
+
+    const completedInPeriod = currentTasksToConsider.filter(
       (t) => t.status === 'COMPLETED',
     ).length
-    const inProgress = filteredTasks.filter(
+    const inProgressInPeriod = currentTasksToConsider.filter(
       (t) => t.status === 'IN_PROGRESS',
     ).length
-    const notStarted = filteredTasks.filter(
+    const notStartedInPeriod = currentTasksToConsider.filter(
       (t) => t.status === 'NOT_STARTED',
     ).length
-    const overdue = filteredTasks.filter((t) => t.status === 'OVERDUE').length
-
-    // 计算完成任务的平均时间（分钟）
-    const completedTasks = filteredTasks.filter(
+    const overdueInPeriod = currentTasksToConsider.filter(
+      (t) => t.status === 'OVERDUE',
+    ).length
+    const completedTasksWithTimeInPeriod = currentTasksToConsider.filter(
       (t) => t.status === 'COMPLETED' && t.actualTimeMinutes,
     )
-    const totalTimeSpent = completedTasks.reduce(
+    const totalTimeSpentInPeriod = completedTasksWithTimeInPeriod.reduce(
       (sum, task) => sum + (task.actualTimeMinutes || 0),
       0,
     )
-    const avgTimeSpent = completedTasks.length
-      ? Math.round(totalTimeSpent / completedTasks.length)
+    const avgTimeSpentInPeriod = completedTasksWithTimeInPeriod.length
+      ? Math.round(
+          totalTimeSpentInPeriod / completedTasksWithTimeInPeriod.length,
+        )
       : 0
 
-    return {
-      total: filteredTasks.length,
-      completed,
-      inProgress,
-      notStarted,
-      overdue,
-      completionRate: filteredTasks.length
-        ? Math.round((completed / filteredTasks.length) * 100)
-        : 0,
-      avgTimeSpent,
+    let calculatedStats: TaskStats = {
+      total: currentTasksToConsider.length,
+      completed: completedInPeriod,
+      inProgress: inProgressInPeriod,
+      notStarted: notStartedInPeriod,
+      overdue: overdueInPeriod,
+      avgTimeSpent: avgTimeSpentInPeriod,
     }
-  }, [filteredTasks])
 
-  // 任务完成时间线数据
-  const completedTaskTimeline = useMemo(() => {
-    return filteredTasks
-      .filter(
-        (task) =>
-          (task.status === 'COMPLETED' || task.status === 'ARCHIVED') &&
-          task.completionDate,
-      )
-      .sort((a, b) => {
-        if (!a.completionDate || !b.completionDate) return 0
-        return (
-          new Date(b.completionDate).getTime() -
-          new Date(a.completionDate).getTime()
+    calculatedStats.totalTasksAllTypes = tasks.length
+    const allStepTasksGlobal = tasks.filter(
+      (t) => t.type === 'STEP',
+    ) as StepTask[]
+    const completedAllStepTasksGlobal = allStepTasksGlobal.filter(
+      (t) => t.status === 'COMPLETED',
+    ).length
+    calculatedStats.stepTaskCompletionRateAll = allStepTasksGlobal.length
+      ? Math.round(
+          (completedAllStepTasksGlobal / allStepTasksGlobal.length) * 100,
         )
+      : 0
+
+    const allHabitTasksGlobal = tasks.filter(
+      (t) => t.type === 'HABIT',
+    ) as HabitTask[]
+    if (allHabitTasksGlobal.length > 0) {
+      let totalCurrentStreakGlobal = 0
+      let habitWithDetailsCountGlobal = 0
+      allHabitTasksGlobal.forEach((ht) => {
+        if (
+          ht.habitTaskDetail &&
+          typeof ht.habitTaskDetail.currentStreak === 'number'
+        ) {
+          totalCurrentStreakGlobal += ht.habitTaskDetail.currentStreak
+          habitWithDetailsCountGlobal++
+        }
       })
-      .slice(0, 10) // 只显示最近的10个完成任务
-  }, [filteredTasks])
+      calculatedStats.habitTaskAverageCurrentStreakAll =
+        habitWithDetailsCountGlobal > 0
+          ? Math.round(totalCurrentStreakGlobal / habitWithDetailsCountGlobal)
+          : 0
+    } else {
+      calculatedStats.habitTaskAverageCurrentStreakAll = 0
+    }
 
-  // 日历单元格渲染
-  const cellRender = (date: Dayjs) => {
-    // 查找当天完成的任务
-    const dayTasks = filteredTasks.filter((task) => {
-      const taskDate = dayjs(task.completionDate)
-      return (
-        task.status === 'COMPLETED' &&
-        taskDate.date() === date.date() &&
-        taskDate.month() === date.month() &&
-        taskDate.year() === date.year()
-      )
+    const completedAllTasksGlobal = tasks.filter(
+      (t) => t.status === 'COMPLETED',
+    ).length
+    calculatedStats.completionRate = tasks.length
+      ? Math.round((completedAllTasksGlobal / tasks.length) * 100)
+      : 0
+
+    const habitTasksInPeriod = currentTasksToConsider.filter(
+      (t) => t.type === 'HABIT',
+    ) as HabitTask[]
+    if (habitTasksInPeriod.length > 0) {
+      let totalCurrentStreakPeriod = 0
+      let totalLongestStreakPeriod = 0
+      let countWithDetailsPeriod = 0
+      habitTasksInPeriod.forEach((ht) => {
+        if (
+          ht.habitTaskDetail &&
+          typeof ht.habitTaskDetail.currentStreak === 'number'
+        ) {
+          totalCurrentStreakPeriod += ht.habitTaskDetail.currentStreak
+          countWithDetailsPeriod++
+        }
+        if (
+          ht.habitTaskDetail &&
+          typeof ht.habitTaskDetail.longestStreak === 'number'
+        ) {
+          totalLongestStreakPeriod += ht.habitTaskDetail.longestStreak
+        }
+      })
+      calculatedStats.habitTaskCurrentStreak =
+        countWithDetailsPeriod > 0
+          ? Math.round(totalCurrentStreakPeriod / countWithDetailsPeriod)
+          : 0
+      calculatedStats.habitTaskAverageLongestStreak =
+        countWithDetailsPeriod > 0
+          ? Math.round(totalLongestStreakPeriod / countWithDetailsPeriod)
+          : 0
+    } else {
+      calculatedStats.habitTaskCurrentStreak = 0
+      calculatedStats.habitTaskAverageLongestStreak = 0
+    }
+
+    const creativeTasksInPeriod = currentTasksToConsider.filter(
+      (t) => t.type === 'CREATIVE',
+    ) as CreativeTask[]
+    if (creativeTasksInPeriod.length > 0) {
+      let totalPhaseScorePeriod = 0
+      creativeTasksInPeriod.forEach((ct) => {
+        if (ct.currentPhase === 'DRAFTING') totalPhaseScorePeriod += 1
+        else if (ct.currentPhase === 'REVIEWING') totalPhaseScorePeriod += 2
+        else if (ct.currentPhase === 'FINALIZING') totalPhaseScorePeriod += 3
+      })
+      calculatedStats.creativeTaskAveragePhase = creativeTasksInPeriod.length
+        ? parseFloat(
+            (totalPhaseScorePeriod / creativeTasksInPeriod.length).toFixed(1),
+          )
+        : 0
+    } else {
+      calculatedStats.creativeTaskAveragePhase = 0
+    }
+
+    return calculatedStats
+  }, [filteredTasks, tasks])
+
+  const completedTaskTimeline = useMemo((): TimelineItem[] => {
+    const items: TimelineItem[] = []
+    filteredTasks.forEach((task) => {
+      if (task.status === 'COMPLETED' && task.completionDate) {
+        items.push({
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          type: task.type,
+          completionDate: new Date(task.completionDate),
+          actualTimeMinutes: task.actualTimeMinutes,
+          steps: task.type === 'STEP' ? (task as StepTask).steps : undefined, // Use .steps from StepTask
+          timelineItemType: 'TASK_COMPLETION',
+          timelineDate: new Date(task.completionDate),
+          originalTaskData: task,
+        })
+      }
     })
+    const currentHabitTasks = tasks.filter(
+      (t) => t.type === 'HABIT',
+    ) as HabitTask[]
+    currentHabitTasks.forEach((habitTask) => {
+      if (habitTask.habitTaskDetail?.checkInRecords) {
+        const records = habitTask.habitTaskDetail.checkInRecords
+        const [startDate, endDate] = dateRange || [null, null]
+        records.forEach((record: CheckInRecordDTO) => {
+          const recordDate = dayjs(record.date)
+          let includeRecord = true
+          if (startDate && endDate) {
+            includeRecord = recordDate.isBetween(startDate, endDate, null, '[]')
+          }
+          if (includeRecord) {
+            items.push({
+              id: `${habitTask.id}-${record.date}`,
+              title: habitTask.title,
+              timelineItemType: 'HABIT_CHECK_IN',
+              timelineDate: recordDate.toDate(),
+              taskType: 'HABIT',
+              originalTask: habitTask,
+              checkInNote: record.notes,
+            })
+          }
+        })
+      }
+    })
+    return items.sort(
+      (a, b) => b.timelineDate.getTime() - a.timelineDate.getTime(),
+    )
+  }, [filteredTasks, tasks, dateRange])
 
-    if (dayTasks.length === 0) return null
-
+  const cellRender = (date: Dayjs) => {
+    const dayTasks = filteredTasks.filter((task) => {
+      if (task.status === 'COMPLETED' && task.completionDate) {
+        return dayjs(task.completionDate).isSame(date, 'day')
+      }
+      return false
+    })
+    const dayHabitCheckIns = completedTaskTimeline.filter(
+      (item) =>
+        item.timelineItemType === 'HABIT_CHECK_IN' &&
+        dayjs(item.timelineDate).isSame(date, 'day'),
+    )
     return (
       <div className="task-calendar-cell">
-        <Badge
-          count={dayTasks.length}
-          color="green"
-        />
+        {(dayTasks.length > 0 || dayHabitCheckIns.length > 0) && (
+          <Badge
+            count={dayTasks.length + dayHabitCheckIns.length}
+            size="small"
+          />
+        )}
       </div>
     )
   }
 
-  // 处理登录按钮点击
-  const handleLogin = () => {
-    navigate('/login')
-  }
-
-  // 如果未登录，显示提示信息
   if (!isAuthenticated) {
     return (
       <div style={{ padding: '24px 0' }}>
         <Result
-          status="info"
-          title="查看任务进度"
-          subTitle="登录后可查看您的任务进度跟踪"
+          status="403"
+          title="访问受限"
+          subTitle="请先登录以查看任务进度。"
           extra={
             <Button
               type="primary"
               icon={<LoginOutlined />}
-              onClick={handleLogin}
+              onClick={() => navigate('/login')}
             >
-              立即登录
+              前往登录
             </Button>
           }
         />
@@ -370,457 +443,518 @@ const TaskProgressPage: React.FC = () => {
     )
   }
 
-  // 处理任务类型变化
-  const handleTaskTypeChange = async (
-    type: 'ALL' | 'STEP' | 'HABIT' | 'CREATIVE',
-  ) => {
-    console.log('任务类型变化:', type)
-    setSelectedTaskType(type)
-
-    // 立即获取数据而不等待useEffect触发
-    setLoading(true)
+  const handleHabitCheckIn = async (taskId: number) => {
+    setLoadingTaskIds((prev) => new Set(prev).add(taskId))
     try {
-      let tasksData: Task[] = []
+      const updateState = (prevTasks: Task[]) =>
+        prevTasks.map((t) =>
+          t.id === taskId && t.type === 'HABIT'
+            ? ({
+                ...t,
+                habitTaskDetail: t.habitTaskDetail
+                  ? {
+                      ...t.habitTaskDetail,
+                      currentStreak: (t.habitTaskDetail.currentStreak || 0) + 1,
+                      lastCompleted: dayjs().format('YYYY-MM-DD'),
+                      checkInRecords: [
+                        ...(t.habitTaskDetail.checkInRecords || []),
+                        {
+                          date: dayjs().format('YYYY-MM-DD'),
+                          status: 'DONE',
+                          notes: '今日已打卡 (自动)',
+                        } as CheckInRecordDTO,
+                      ],
+                    }
+                  : {
+                      currentStreak: 1,
+                      longestStreak: 1,
+                      lastCompleted: dayjs().format('YYYY-MM-DD'),
+                      checkInRecords: [
+                        {
+                          date: dayjs().format('YYYY-MM-DD'),
+                          status: 'DONE',
+                          notes: '今日已打卡 (自动)',
+                        } as CheckInRecordDTO,
+                      ],
+                      frequency: 'DAILY',
+                    },
+              } as HabitTask)
+            : t,
+        )
+      setHabitTasks((prevHabitTasks) =>
+        prevHabitTasks.map((t) =>
+          t.id === taskId
+            ? (updateState([t])[0] as HabitTask)
+            : (t as HabitTask),
+        ),
+      )
+      setTasks(updateState)
+      await checkInHabitTask(taskId)
+      message.success('打卡成功！')
+    } catch (error: any) {
+      message.error(
+        error.response?.data?.message || '打卡失败，请检查网络或稍后再试',
+      )
+    } finally {
+      setLoadingTaskIds((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(taskId)
+        return newSet
+      })
+    }
+  }
 
-      switch (type) {
-        case 'STEP':
-          console.log('立即调用步骤型任务API...')
-          const stepData = await getAllStepTasks()
-          console.log('获取到步骤型任务数据:', stepData)
-          setStepTasks(stepData)
-          tasksData = stepData
-          break
-        case 'HABIT':
-          console.log('立即调用习惯型任务API...')
-          const habitData = await getAllHabitTasks()
-          console.log('获取到习惯型任务数据:', habitData)
-          setHabitTasks(habitData)
-          tasksData = habitData
-          break
-        case 'CREATIVE':
-          console.log('立即调用创意型任务API...')
-          const creativeData = await getAllCreativeTasks()
-          console.log('获取到创意型任务数据:', creativeData)
-          setCreativeTasks(creativeData)
-          tasksData = creativeData
-          break
-        default:
-          console.log('立即调用所有任务API...')
-          tasksData = await getAllTasks()
-          console.log('获取到所有任务数据:', tasksData)
-          break
+  const handleStepUpdate = async (
+    taskId: number,
+    stepId: string, // Changed to string
+    newStatus: 'PENDING' | 'DONE',
+  ) => {
+    setLoadingTaskIds((prev) => new Set(prev).add(taskId))
+    try {
+      await updateStepStatus(taskId, stepId, newStatus) // stepId is string
+
+      const updateStepsRecursive = (steps: Step[]): Step[] => {
+        return steps.map((step) => {
+          if (step.id === stepId) {
+            // Both are strings
+            return { ...step, status: newStatus }
+          }
+          // Step type does not have subSteps
+          return step
+        })
       }
 
-      setTasks(tasksData)
-      message.success(
-        `成功获取${
-          type === 'ALL'
-            ? '所有'
-            : type === 'STEP'
-            ? '步骤型'
-            : type === 'HABIT'
-            ? '习惯型'
-            : '创意型'
-        }任务`,
+      const updateTaskInState = (prevTasks: Task[]): Task[] => {
+        return prevTasks.map((task) => {
+          if (task.id === taskId && task.type === 'STEP') {
+            const stepTask = task as StepTask
+            const currentSteps = stepTask.steps || []
+            const updatedSteps = updateStepsRecursive(currentSteps)
+
+            let newOverallStatus: Task['status'] = 'IN_PROGRESS'
+            if (updatedSteps.every((s) => s.status === 'DONE')) {
+              newOverallStatus = 'COMPLETED'
+            } else if (
+              updatedSteps.some(
+                (s) => s.status === 'DONE' || s.status === 'PENDING',
+              )
+            ) {
+              newOverallStatus = 'IN_PROGRESS'
+            } else if (updatedSteps.length > 0) {
+              newOverallStatus = 'NOT_STARTED'
+            } else {
+              newOverallStatus = stepTask.status
+            }
+
+            // Helper to convert Step to StepDTO
+            const toStepDTO = (step: Step): StepDTO => ({
+              id: step.id,
+              title: step.title,
+              description: step.description,
+              status: step.status,
+              order: step.order,
+              // validationScore is on StepDTO, not Step. Add if needed or handle.
+            })
+
+            return {
+              ...stepTask,
+              steps: updatedSteps,
+              status: newOverallStatus,
+              completionDate:
+                newOverallStatus === 'COMPLETED'
+                  ? new Date()
+                  : stepTask.completionDate,
+              stepTaskDetail: stepTask.stepTaskDetail
+                ? {
+                    ...stepTask.stepTaskDetail,
+                    steps: updatedSteps.map(toStepDTO), // Convert Step[] to StepDTO[]
+                    completedSteps: updatedSteps.filter(
+                      (s) => s.status === 'DONE',
+                    ).length,
+                    blockedSteps: updatedSteps.filter(
+                      (s) => s.status === 'BLOCKED',
+                    ).length,
+                  }
+                : undefined,
+            } as StepTask
+          }
+          return task
+        })
+      }
+
+      setTasks(updateTaskInState)
+      setStepTasks((prevStepTasks) =>
+        prevStepTasks.map((task) =>
+          task.id === taskId
+            ? (updateTaskInState([task])[0] as StepTask)
+            : task,
+        ),
       )
+
+      message.success('步骤状态更新成功！')
     } catch (error) {
-      console.error('获取任务数据失败:', error)
-      message.error('获取任务数据失败，请重试')
+      message.error('更新步骤状态失败，请重试。')
     } finally {
-      setLoading(false)
+      setLoadingTaskIds((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(taskId)
+        return newSet
+      })
     }
   }
 
   return (
     <div style={{ padding: '24px' }}>
+      <Title level={2}>任务进度总览</Title>
       <div
         style={{
+          marginBottom: 24,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 24,
         }}
       >
-        <Title level={2}>任务进度跟踪</Title>
         <Space>
-          <Select
-            placeholder="选择目标筛选"
-            style={{ width: 200 }}
-            allowClear
-            onChange={(value) => setSelectedGoalId(value)}
-            loading={loading}
-          >
-            {goals.map((goal) => (
-              <Select.Option
-                key={goal.id}
-                value={goal.id}
-              >
-                {goal.title}
-              </Select.Option>
-            ))}
-          </Select>
-
-          {/* 添加任务类型选择器 */}
-          <Select
-            placeholder="选择任务类型"
-            style={{ width: 200 }}
-            value={selectedTaskType}
-            onChange={handleTaskTypeChange}
-            loading={loading}
-          >
-            <Select.Option value="ALL">所有类型</Select.Option>
-            <Select.Option value="STEP">步骤型任务</Select.Option>
-            <Select.Option value="HABIT">习惯型任务</Select.Option>
-            <Select.Option value="CREATIVE">创意型任务</Select.Option>
-          </Select>
-
+          <Text>日期范围:</Text>
           <RangePicker
             value={dateRange}
-            onChange={handleDateRangeChange as any}
+            onChange={handleDateRangeChange}
+            disabled={loading}
           />
           <Button
             icon={<ReloadOutlined />}
             onClick={refreshData}
             loading={loading}
+            disabled={loading}
           >
-            刷新
+            刷新数据
           </Button>
         </Space>
       </div>
 
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={(key) => {
+          setActiveTab(key)
+          if (key === 'overview') {
+            setSelectedTaskForDetailView(null)
+          } else {
+            const task = tasks.find((t) => t.id.toString() === key)
+            setSelectedTaskForDetailView(task || null)
+          }
+        }}
       >
         <TabPane
-          tab="总览"
+          tab="概览 & 统计"
           key="overview"
         >
-          <Row gutter={[16, 16]}>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="任务完成率"
-                  value={taskStats.completionRate}
-                  suffix="%"
-                  precision={0}
-                />
-                <Progress
-                  percent={taskStats.completionRate}
-                  status={
-                    taskStats.completionRate === 100 ? 'success' : 'active'
-                  }
-                  strokeColor={{
-                    '0%': '#108ee9',
-                    '100%': '#87d068',
-                  }}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="总任务数"
-                  value={taskStats.total}
-                  suffix={
-                    <Tooltip title="已完成/进行中/未开始/过期">
-                      <Text type="secondary">
-                        ({taskStats.completed}/{taskStats.inProgress}/
-                        {taskStats.notStarted}/{taskStats.overdue})
-                      </Text>
-                    </Tooltip>
-                  }
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="平均完成时间"
-                  value={taskStats.avgTimeSpent}
-                  suffix="分钟"
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="今日待完成"
-                  value={
-                    filteredTasks.filter(
-                      (t) =>
-                        t.status !== 'COMPLETED' &&
-                        dayjs(t.updatedAt).isSame(dayjs(), 'day'),
-                    ).length
-                  }
-                />
-              </Card>
-            </Col>
-          </Row>
-
-          <Row
-            gutter={[16, 16]}
-            style={{ marginTop: 16 }}
-          >
-            <Col span={16}>
-              <Card title="任务完成时间线">
-                {completedTaskTimeline.length > 0 ? (
-                  <Timeline>
-                    {completedTaskTimeline.map((task) => (
-                      <Timeline.Item
-                        key={task.id}
-                        color="green"
-                      >
-                        <p>
-                          <Text strong>{task.title}</Text>
-                          <Tag
-                            color="success"
-                            style={{ marginLeft: 8 }}
-                          >
-                            已完成
-                          </Tag>
-                        </p>
-                        <p>
-                          <Text type="secondary">
-                            完成时间:{' '}
-                            {dayjs(task.completionDate).format(
-                              'YYYY-MM-DD HH:mm',
-                            )}
-                          </Text>
-                          {task.actualTimeMinutes && (
-                            <Text
-                              type="secondary"
-                              style={{ marginLeft: 8 }}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <Spin size="large" />
+            </div>
+          ) : (
+            <>
+              <Row gutter={[16, 16]}>
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                >
+                  <Card hoverable>
+                    <Statistic
+                      title="总任务数 (筛选范围内)"
+                      value={taskStats.total}
+                    />
+                  </Card>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                >
+                  <Card hoverable>
+                    <Statistic
+                      title="已完成 (筛选范围内)"
+                      value={taskStats.completed}
+                      valueStyle={{ color: '#3f8600' }}
+                    />
+                    <Progress
+                      percent={
+                        taskStats.total
+                          ? Math.round(
+                              ((taskStats.completed || 0) / taskStats.total) *
+                                100,
+                            )
+                          : 0
+                      }
+                      status="active"
+                      strokeColor={{ from: '#108ee9', to: '#87d068' }}
+                    />
+                  </Card>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                >
+                  <Card hoverable>
+                    <Statistic
+                      title="进行中 (筛选范围内)"
+                      value={taskStats.inProgress}
+                      valueStyle={{ color: '#d48806' }}
+                    />
+                  </Card>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                >
+                  <Card hoverable>
+                    <Statistic
+                      title="平均耗时 (已完成)"
+                      value={taskStats.avgTimeSpent}
+                      suffix="分钟"
+                    />
+                  </Card>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                >
+                  <Card hoverable>
+                    <Statistic
+                      title="总体完成率 (所有任务)"
+                      value={taskStats.completionRate}
+                      precision={0}
+                      suffix="%"
+                      valueStyle={
+                        (taskStats.completionRate || 0) >= 75
+                          ? { color: '#3f8600' }
+                          : (taskStats.completionRate || 0) >= 50
+                          ? { color: '#d48806' }
+                          : { color: '#cf1322' }
+                      }
+                    />
+                    <Progress
+                      percent={taskStats.completionRate}
+                      status={
+                        (taskStats.completionRate || 0) >= 100
+                          ? 'success'
+                          : 'active'
+                      }
+                    />
+                  </Card>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                >
+                  <Card hoverable>
+                    <Statistic
+                      title="步骤任务总体完成率"
+                      value={taskStats.stepTaskCompletionRateAll}
+                      precision={0}
+                      suffix="%"
+                    />
+                  </Card>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                >
+                  <Card hoverable>
+                    <Statistic
+                      title="习惯任务平均当前连胜 (所有)"
+                      value={taskStats.habitTaskAverageCurrentStreakAll}
+                      precision={0}
+                      suffix="天"
+                    />
+                  </Card>
+                </Col>
+              </Row>
+              <Divider />
+              <Row gutter={[16, 24]}>
+                <Col span={16}>
+                  <Collapse defaultActiveKey={['completedTimeline']}>
+                    <Collapse.Panel
+                      header="近期完成与打卡时间线 (筛选范围内)"
+                      key="completedTimeline"
+                    >
+                      {completedTaskTimeline.length > 0 ? (
+                        <Timeline mode="left">
+                          {completedTaskTimeline.map((item) => (
+                            <Timeline.Item
+                              key={item.id}
+                              label={dayjs(item.timelineDate).format(
+                                'YYYY-MM-DD HH:mm',
+                              )}
+                              color={
+                                item.timelineItemType === 'TASK_COMPLETION'
+                                  ? 'green'
+                                  : 'blue'
+                              }
+                              dot={
+                                item.timelineItemType === 'TASK_COMPLETION' ? (
+                                  <CheckCircleOutlined />
+                                ) : undefined
+                              }
                             >
-                              耗时: {task.actualTimeMinutes} 分钟
-                            </Text>
-                          )}
-                        </p>
-                        {task.type === 'STEP' &&
-                          (task as StepTask).steps &&
-                          (task as StepTask).steps!.length > 0 && (
-                            <div style={{ marginTop: 8 }}>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  marginBottom: 8,
-                                }}
-                              >
-                                <Text strong>步骤:</Text>
-                              </div>
-                              <ul style={{ marginLeft: 16 }}>
-                                {((task as StepTask).steps || []).map(
-                                  (step) => (
-                                    <li key={step.id}>
-                                      <div>
-                                        <div className="step-title-row">
-                                          <Text
-                                            delete={
-                                              step.completed ||
-                                              step.status === 'DONE'
-                                            }
-                                            strong
-                                            className={
-                                              step.completed ||
-                                              step.status === 'DONE'
-                                                ? 'step-completed'
-                                                : ''
-                                            }
+                              <Title level={5}>{item.title}</Title>
+                              {item.timelineItemType === 'TASK_COMPLETION' && (
+                                <p>
+                                  <Tag
+                                    color={
+                                      (item as TimelineTaskItem).type === 'STEP'
+                                        ? 'processing'
+                                        : (item as TimelineTaskItem).type ===
+                                          'HABIT'
+                                        ? 'success'
+                                        : 'warning'
+                                    }
+                                  >
+                                    {(item as TimelineTaskItem).type}
+                                  </Tag>
+                                  {(item as TimelineTaskItem)
+                                    .actualTimeMinutes && (
+                                    <Text
+                                      type="secondary"
+                                      style={{ marginLeft: 8 }}
+                                    >
+                                      耗时:{' '}
+                                      {
+                                        (item as TimelineTaskItem)
+                                          .actualTimeMinutes
+                                      }{' '}
+                                      分钟
+                                    </Text>
+                                  )}
+                                </p>
+                              )}
+                              {(item as TimelineCheckInItem).checkInNote && (
+                                <Text
+                                  type="secondary"
+                                  italic
+                                >
+                                  打卡备注:{' '}
+                                  {(item as TimelineCheckInItem).checkInNote}
+                                </Text>
+                              )}
+                              {(item as TimelineTaskItem).type === 'STEP' &&
+                                (item as TimelineTaskItem).steps &&
+                                ((item as TimelineTaskItem).steps || [])
+                                  .length > 0 && (
+                                  <div
+                                    style={{
+                                      marginTop: '8px',
+                                      paddingLeft: '20px',
+                                    }}
+                                  >
+                                    <Text strong>完成的步骤:</Text>
+                                    <Timeline>
+                                      {((item as TimelineTaskItem).steps || [])
+                                        .filter(
+                                          (step) => step.status === 'DONE',
+                                        )
+                                        .map((step: StepItemType) => (
+                                          <Timeline.Item
+                                            key={step.id}
+                                            color="green"
                                           >
-                                            {step.title}
-                                          </Text>
-
-                                          {/* 完成/取消完成按钮 */}
-                                          <div className="step-action-buttons">
-                                            {step.completed ||
-                                            step.status === 'DONE' ? null : ( // If step is DONE, render nothing (removed "取消完成" button)
-                                              <Button
-                                                type="primary"
-                                                size="small"
-                                                className="step-action-button"
-                                                icon={<CheckCircleOutlined />}
-                                                onClick={async () => {
-                                                  try {
-                                                    message.loading(
-                                                      '正在更新步骤状态...',
-                                                      0,
-                                                    )
-                                                    await updateStepStatus(
-                                                      task.id,
-                                                      step.id,
-                                                      'DONE',
-                                                    )
-                                                    message.destroy()
-                                                    message.success(
-                                                      '步骤已标记为完成',
-                                                    )
-                                                    // 刷新数据
-                                                    refreshData()
-                                                  } catch (error) {
-                                                    message.destroy()
-                                                    message.error(
-                                                      '更新步骤状态失败，请重试',
-                                                    )
-                                                  }
+                                            <div className="step-title-row">
+                                              <Text>{step.title}</Text>
+                                            </div>
+                                            {step.description && (
+                                              <Paragraph
+                                                type="secondary"
+                                                ellipsis={{
+                                                  rows: 2,
+                                                  expandable: true,
+                                                  symbol: '更多',
                                                 }}
                                               >
-                                                完成
-                                              </Button>
+                                                {step.description}
+                                              </Paragraph>
                                             )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </li>
-                                  ),
+                                          </Timeline.Item>
+                                        ))}
+                                    </Timeline>
+                                  </div>
                                 )}
-                              </ul>
-                            </div>
-                          )}
-                      </Timeline.Item>
-                    ))}
-                  </Timeline>
-                ) : (
-                  <Empty description="暂无已完成任务" />
-                )}
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card title="任务类型分布">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-around',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <Statistic
-                    title={
-                      <div>
-                        <Tag color="blue">步骤类</Tag>
-                      </div>
-                    }
-                    value={
-                      filteredTasks.filter((t) => t.type === 'STEP').length
-                    }
-                    valueStyle={{ textAlign: 'center' }}
-                  />
-                  <Statistic
-                    title={
-                      <div>
-                        <Tag color="green">习惯类</Tag>
-                      </div>
-                    }
-                    value={
-                      filteredTasks.filter((t) => t.type === 'HABIT').length
-                    }
-                    valueStyle={{ textAlign: 'center' }}
-                  />
-                  <Statistic
-                    title={
-                      <div>
-                        <Tag color="purple">创作类</Tag>
-                      </div>
-                    }
-                    value={
-                      filteredTasks.filter((t) => t.type === 'CREATIVE').length
-                    }
-                    valueStyle={{ textAlign: 'center' }}
-                  />
-                </div>
-                <Divider />
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-around',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <Statistic
-                    title={
-                      <div>
-                        <Tag color="red">高优先级</Tag>
-                      </div>
-                    }
-                    value={
-                      filteredTasks.filter((t) => t.priority === 'HIGH').length
-                    }
-                    valueStyle={{ textAlign: 'center' }}
-                  />
-                  <Statistic
-                    title={
-                      <div>
-                        <Tag color="orange">中优先级</Tag>
-                      </div>
-                    }
-                    value={
-                      filteredTasks.filter((t) => t.priority === 'MEDIUM')
-                        .length
-                    }
-                    valueStyle={{ textAlign: 'center' }}
-                  />
-                  <Statistic
-                    title={
-                      <div>
-                        <Tag>低优先级</Tag>
-                      </div>
-                    }
-                    value={
-                      filteredTasks.filter((t) => t.priority === 'LOW').length
-                    }
-                    valueStyle={{ textAlign: 'center' }}
-                  />
-                </div>
-              </Card>
-            </Col>
-          </Row>
-
-          <Card
-            title="任务完成日历"
-            style={{ marginTop: 16 }}
-          >
-            <Calendar
-              fullscreen={false}
-              cellRender={cellRender}
-            />
-          </Card>
+                            </Timeline.Item>
+                          ))}
+                        </Timeline>
+                      ) : (
+                        <Empty description="筛选范围内暂无已完成任务或打卡记录" />
+                      )}
+                    </Collapse.Panel>
+                  </Collapse>
+                </Col>
+                <Col span={8}>
+                  <Card title="任务日历 (按完成/打卡日期)">
+                    <Calendar
+                      fullscreen={false}
+                      onSelect={(date) =>
+                        setActiveTab(date.format('YYYY-MM-DD'))
+                      }
+                      cellRender={cellRender}
+                      value={dateRange ? dateRange[0] : dayjs()}
+                      onPanelChange={(date, mode) => {
+                        if (mode === 'month') {
+                          console.log(
+                            'Calendar month changed to:',
+                            date.format('YYYY-MM'),
+                          )
+                        }
+                      }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            </>
+          )}
         </TabPane>
 
         <TabPane
-          tab="进度详情"
+          tab="任务详情与操作"
           key="details"
+          disabled={!tasks.length && !loading}
         >
           <ProgressTracker
-            selectedTaskType={selectedTaskType}
             preloadedTasks={tasks}
-            onTabChange={(tabKey) => {
-              // 根据ProgressTracker的标签页自动设置任务类型
-              let taskType: 'ALL' | 'STEP' | 'HABIT' | 'CREATIVE' = 'ALL'
-              switch (tabKey) {
-                case '1':
-                  taskType = 'HABIT'
-                  break
-                case '2':
-                  taskType = 'STEP'
-                  break
-                case '3':
-                  taskType = 'CREATIVE'
-                  break
-              }
-
-              // 调用handleTaskTypeChange函数来更新任务类型并获取数据
-              console.log(
-                '从ProgressTracker接收到标签变化，更新任务类型为:',
-                taskType,
-              )
-              handleTaskTypeChange(taskType)
+            onTaskSelect={(task: Task) => {
+              setSelectedTaskForDetailView(task)
+              setActiveTab(task.id.toString())
             }}
+            onTabChange={(tabKey) => {
+              setActiveTab(tabKey)
+              if (
+                tabKey === 'overview' ||
+                !tasks.find((t) => t.id.toString() === tabKey)
+              ) {
+                setSelectedTaskForDetailView(null)
+              } else {
+                const task = tasks.find((t) => t.id.toString() === tabKey)
+                setSelectedTaskForDetailView(task || null)
+              }
+            }}
+            onCheckIn={handleHabitCheckIn}
+            loadingTaskIds={loadingTaskIds}
+            onStepUpdate={handleStepUpdate}
+            onTaskUpdate={handleTaskUpdate}
           />
         </TabPane>
       </Tabs>
-
-      {/* Modal代码已移除 */}
     </div>
   )
 }
