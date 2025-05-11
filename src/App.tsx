@@ -12,7 +12,7 @@ import {
 } from './contexts/PreferenceContext' // 导入PreferenceProvider
 import { ThemeProvider, useTheme } from './contexts/ThemeContext' // Import ThemeProvider and useTheme
 import MainLayout from './layouts/MainLayout'
-import Community from './pages/Community'
+// import Community from './pages/Community'; // Removed Community import
 import Courses from './pages/Courses'
 import Dashboard from './pages/Dashboard'
 import LoginPage from './pages/LoginPage' // Import LoginPage
@@ -79,10 +79,10 @@ const ThemedApp: React.FC = () => {
                   path="progress"
                   element={<Progress />}
                 />
-                <Route
+                {/* <Route
                   path="community"
                   element={<Community />}
-                />
+                /> */}
                 <Route
                   path="profile"
                   element={<ProfilePage />}

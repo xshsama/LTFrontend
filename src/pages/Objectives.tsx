@@ -115,7 +115,7 @@ const ObjectivesPage: React.FC = () => {
             {
               id: 999999,
               title: '测试目标 (请登录获取真实数据)',
-              status: 'NOT_STARTED',
+              status: 'ONGOING',
               priority: 'MEDIUM',
               progress: 0,
               createdAt: new Date(),
@@ -140,7 +140,7 @@ const ObjectivesPage: React.FC = () => {
             {
               id: 999999,
               title: '测试目标 (API返回格式错误)',
-              status: 'NOT_STARTED',
+              status: 'ONGOING',
               priority: 'MEDIUM',
               progress: 0,
               createdAt: new Date(),
@@ -156,7 +156,7 @@ const ObjectivesPage: React.FC = () => {
               {
                 id: 999999,
                 title: '测试目标 - 请先创建学习目标',
-                status: 'NOT_STARTED',
+                status: 'ONGOING',
                 priority: 'MEDIUM',
                 progress: 0,
                 createdAt: new Date(),
@@ -279,7 +279,7 @@ const ObjectivesPage: React.FC = () => {
     title: string
     priority?: string
     categoryId?: number
-    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+    status?: 'ONGOING' | 'COMPLETED' | 'EXPIRED'
     description?: string
     targetDate?: Date
     progress?: number
@@ -421,28 +421,6 @@ const ObjectivesPage: React.FC = () => {
     }
   }
 
-  // 如果未登录，显示提示信息
-  if (!isAuthenticated) {
-    return (
-      <div className="objectives-container">
-        <Result
-          status="info"
-          title="请先登录"
-          subTitle="登录后即可查看和管理您的学习目标、任务和成就"
-          extra={
-            <Button
-              type="primary"
-              icon={<LoginOutlined />}
-              onClick={handleLogin}
-            >
-              立即登录
-            </Button>
-          }
-        />
-      </div>
-    )
-  }
-
   // 计算每个目标下所有附属任务的标签集合（去重）
   const goalAggregatedTaskTags = useMemo(() => {
     const result: Record<number, GoalTagType[]> = {} // Ensure result stores GoalTagType arrays
@@ -508,6 +486,29 @@ const ObjectivesPage: React.FC = () => {
       return { ...goal, progress: calculatedProgress } // Update progress
     })
   }, [goals, tasks])
+
+  // 如果未登录，显示提示信息
+  // This block is moved here to ensure all top-level hooks are called before any conditional returns.
+  if (!isAuthenticated) {
+    return (
+      <div className="objectives-container">
+        <Result
+          status="info"
+          title="请先登录"
+          subTitle="登录后即可查看和管理您的学习目标、任务和成就"
+          extra={
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={handleLogin}
+            >
+              立即登录
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
 
   const tabItems = [
     {
@@ -625,7 +626,7 @@ const ObjectivesPage: React.FC = () => {
                   {
                     id: 888888,
                     title: '测试目标 - 请先创建学习目标',
-                    status: 'NOT_STARTED',
+                    status: 'ONGOING',
                     priority: 'MEDIUM',
                     progress: 0,
                     createdAt: new Date(),

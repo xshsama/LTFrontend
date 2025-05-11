@@ -169,11 +169,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
       title: values.title,
       type: values.type,
       goalId: values.goalId,
+      weight: values.weight || 1, // Default weight to 1 if not provided
       tagIds: selectedTagIds,
       // 可选添加其他字段
       metadata: JSON.stringify({
-        weight: values.weight || 5,
-        status: values.status || 'ACTIVE',
+        // status and completionDate might still be relevant in metadata for some specific UI logic
+        // or if not all task statuses map directly to backend BaseTask.Status
+        status: values.status || 'IN_PROGRESS', // Align with BaseTask default
         completionDate: values.completionDate
           ? values.completionDate.format('YYYY-MM-DD')
           : undefined,
@@ -244,15 +246,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
         completionDate: initialValues?.completionDate
           ? dayjs(initialValues.completionDate)
           : undefined,
-        status: initialValues?.status || 'ACTIVE',
+        status: initialValues?.status || 'IN_PROGRESS', // Align with BaseTask default
         type: initialValues?.type || 'STEP',
-        // 从metadata中提取额外字段，如果存在的话
-        weight: initialValues?.metadata
-          ? JSON.parse(initialValues.metadata || '{}').weight || 5
-          : 5,
-        actualTimeMinutes: initialValues?.metadata
-          ? JSON.parse(initialValues.metadata || '{}').actualTimeMinutes || 0
-          : 0,
+        weight: initialValues?.weight || 1, // Use direct weight property, default to 1
+        actualTimeMinutes: initialValues?.actualTimeMinutes || 0, // Assuming actualTimeMinutes is now a direct prop or still in metadata
+        // If actualTimeMinutes is also moved to top-level in backend DTO/Entity, adjust here too.
+        // For now, assuming it might still be in metadata or is a direct prop.
+        // If it's direct: initialValues?.actualTimeMinutes || 0,
+        // If still in metadata: initialValues?.metadata ? JSON.parse(initialValues.metadata || '{}').actualTimeMinutes || 0 : 0,
         tagIds: initialValues?.tags?.map((tag: any) => tag.id) || [],
       }}
     >
@@ -321,9 +322,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
         rules={[{ required: true, message: '请选择状态' }]}
       >
         <Select placeholder="选择状态">
-          <Select.Option value="ACTIVE">进行中</Select.Option>
-          <Select.Option value="ARCHIVED">已完成</Select.Option>
+          {/* Align these with BaseTask.Status enum values used in backend and types */}
+          <Select.Option value="IN_PROGRESS">进行中</Select.Option>
+          <Select.Option value="COMPLETED">已完成</Select.Option>
+          <Select.Option value="NOT_STARTED">未开始</Select.Option>
+          <Select.Option value="PAUSED">已暂停</Select.Option>
           <Select.Option value="BLOCKED">已阻塞</Select.Option>
+          <Select.Option value="OVERDUE">已逾期</Select.Option>
+          <Select.Option value="ARCHIVED">已归档</Select.Option>
         </Select>
       </Form.Item>
 

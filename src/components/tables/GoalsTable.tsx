@@ -118,26 +118,24 @@ const GoalsTable: React.FC<GoalsTableProps> = ({
       key: 'status',
       dataIndex: 'status',
       filters: [
-        { text: '未开始', value: 'NOT_STARTED' },
-        { text: '进行中', value: 'IN_PROGRESS' },
+        { text: '进行中', value: 'ONGOING' },
         { text: '已完成', value: 'COMPLETED' },
-        { text: '已放弃', value: 'ABANDONED' },
+        { text: '已过期', value: 'EXPIRED' },
       ],
       onFilter: (value: any, record: Goal) => record.status === value,
       render: (status: GoalStatus) => {
         const statusMap = {
-          NOT_STARTED: '未开始',
-          IN_PROGRESS: '进行中',
+          ONGOING: '进行中',
           COMPLETED: '已完成',
-          ABANDONED: '已放弃',
+          EXPIRED: '已过期',
         }
 
         let color = 'default'
         if (status === 'COMPLETED') {
           color = 'success'
-        } else if (status === 'IN_PROGRESS') {
+        } else if (status === 'ONGOING') {
           color = 'processing'
-        } else if (status === 'ABANDONED') {
+        } else if (status === 'EXPIRED') {
           color = 'error'
         }
 

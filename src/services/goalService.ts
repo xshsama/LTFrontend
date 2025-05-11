@@ -15,17 +15,8 @@ interface UpdateGoalRequest {
 export const getGoals = async (): Promise<Goal[]> => {
     try {
         console.log('正在请求目标列表...');
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            console.warn('获取目标列表失败：未找到认证令牌');
-            return []; // 返回空数组而不是抛出错误
-        }
-
-        const response = await apiClient.get('/api/goals', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        // 移除手动的token获取和header设置，依赖apiService拦截器
+        const response = await apiClient.get('/api/goals');
         console.log('获取目标列表成功:', response.data);
         return response.data;
     } catch (error: any) {
@@ -39,17 +30,8 @@ export const getGoals = async (): Promise<Goal[]> => {
 export const getGoalsBySubject = async (subjectId: number): Promise<Goal[]> => {
     try {
         console.log(`正在获取学科ID=${subjectId}的目标列表...`);
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            console.warn(`获取学科(ID:${subjectId})的目标列表失败：未找到认证令牌`);
-            return []; // 返回空数组而不是抛出错误
-        }
-
-        const response = await apiClient.get(`/api/goals/subject/${subjectId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        // 移除手动的token获取和header设置，依赖apiService拦截器
+        const response = await apiClient.get(`/api/goals/subject/${subjectId}`);
         console.log(`获取学科(ID:${subjectId})的目标列表成功:`, response.data);
         return response.data;
     } catch (error: any) {
@@ -65,27 +47,18 @@ export const createGoal = async (goalData: {
     title: string;
     priority?: string;
     categoryId?: number;
-    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
+    status?: 'ONGOING' | 'COMPLETED' | 'EXPIRED';
     description?: string;
     targetDate?: Date;
     progress?: number;
     tags?: string[];
 }): Promise<Goal> => {
     try {
-        // 验证令牌
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            console.error('创建目标失败: 未找到认证令牌');
-            throw new Error('未登录或认证会话已过期，请重新登录后再试');
-        }
-
+        // 移除手动的token获取和header设置，依赖apiService拦截器
+        // apiClient的拦截器会自动处理Authorization头
+        // Content-Type通常由axios根据data类型自动设置，或在apiClient默认配置中设置
         console.log('正在发送创建目标请求:', goalData);
-        const response = await apiClient.post('/api/goals', goalData, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        const response = await apiClient.post('/api/goals', goalData);
         console.log('创建目标成功:', response.data);
         return response.data;
     } catch (error: any) {
@@ -109,18 +82,10 @@ export const createGoal = async (goalData: {
 export const updateGoal = async (id: number, goalData: UpdateGoalRequest): Promise<Goal> => {
     try {
         console.log(`正在发送更新目标 (ID: ${id}) 请求:`, goalData);
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            console.error(`更新目标 (ID: ${id}) 失败: 未找到认证令牌`);
-            throw new Error('认证失败，请重新登录');
-        }
-        const response = await apiClient.put(`/api/goals/${id}`, goalData, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        // 移除手动的token获取和header设置，依赖apiService拦截器
+        const response = await apiClient.put(`/api/goals/${id}`, goalData);
         console.log(`更新目标 (ID: ${id}) 成功:`, response.data);
+        window.dispatchEvent(new CustomEvent('goalUpdated', { detail: { goalId: id } }));
         return response.data;
     } catch (error: any) {
         console.error(`更新目标 (ID: ${id}) 失败:`, error.response?.status, error.response?.data || error.message);
@@ -154,6 +119,7 @@ export const getGoalById = async (id: number): Promise<Goal> => {
 export const updateGoalProgress = async (id: number, progress: number): Promise<Goal> => {
     try {
         const response = await apiClient.put(`/api/goals/${id}/progress`, { progress });
+        window.dispatchEvent(new CustomEvent('goalUpdated', { detail: { goalId: id } }));
         return response.data;
     } catch (error) {
         console.error('更新目标进度失败:', error);
@@ -165,16 +131,8 @@ export const updateGoalProgress = async (id: number, progress: number): Promise<
 export const deleteGoal = async (id: number): Promise<void> => {
     try {
         console.log(`正在发送删除目标 (ID: ${id}) 请求...`);
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            console.error(`删除目标 (ID: ${id}) 失败: 未找到认证令牌`);
-            throw new Error('认证失败，请重新登录');
-        }
-        await apiClient.delete(`/api/goals/${id}`, { // Ensure leading slash for the path
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        // 移除手动的token获取和header设置，依赖apiService拦截器
+        await apiClient.delete(`/api/goals/${id}`);
         console.log(`删除目标 (ID: ${id}) 成功`);
     } catch (error: any) {
         console.error(`删除目标 (ID: ${id}) 失败:`, error.response?.status, error.response?.data || error.message);
@@ -194,9 +152,10 @@ export const deleteGoal = async (id: number): Promise<void> => {
 };
 
 // 更新目标状态
-export const updateGoalStatus = async (id: number, status: string): Promise<Goal> => {
+export const updateGoalStatus = async (id: number, status: GoalStatus): Promise<Goal> => {
     try {
         const response = await apiClient.put(`/api/goals/${id}/status`, { status });
+        window.dispatchEvent(new CustomEvent('goalUpdated', { detail: { goalId: id } }));
         return response.data;
     } catch (error) {
         console.error('更新目标状态失败:', error);

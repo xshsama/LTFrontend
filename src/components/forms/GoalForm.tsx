@@ -11,7 +11,7 @@ interface GoalFormProps {
     title: string
     priority?: string
     categoryId?: number
-    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+    status?: 'ONGOING' | 'COMPLETED' | 'EXPIRED'
     description?: string
     targetDate?: Date
     progress?: number
@@ -40,7 +40,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
       completionDate: values.completionDate
         ? values.completionDate.format('YYYY-MM-DD')
         : undefined,
-      status: values.status || 'NOT_STARTED',
+      status: values.status || 'ONGOING',
       priority: values.priority || 'MEDIUM',
       progress: values.progress || 0,
     }
@@ -61,7 +61,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
         ...initialValues,
         progress: initialValues?.progress || 0,
         priority: initialValues?.priority || 'MEDIUM',
-        status: initialValues?.status || 'NOT_STARTED',
+        status: initialValues?.status || 'ONGOING',
       }}
     >
       <Form.Item
@@ -122,7 +122,6 @@ const GoalForm: React.FC<GoalFormProps> = ({
         rules={[{ required: true, message: '请选择状态' }]}
       >
         <Select placeholder="选择状态">
-          <Select.Option value="NOT_STARTED">未开始</Select.Option>
           <Select.Option value="ONGOING">进行中</Select.Option>
           <Select.Option value="COMPLETED">已完成</Select.Option>
           <Select.Option value="EXPIRED">已过期</Select.Option>

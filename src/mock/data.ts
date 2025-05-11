@@ -33,7 +33,7 @@ export const mockGoalData: Goal[] = [
         id: 1,
         title: '完成 React Hooks 学习',
         priority: 'HIGH',
-        status: 'IN_PROGRESS',
+        status: 'ONGOING',
         progress: 45,
         createdAt: new Date('2025-04-01T08:00:00Z'), // Convert to Date object
         updatedAt: new Date('2025-04-10T15:30:00Z'), // Convert to Date object
@@ -57,7 +57,7 @@ export const mockGoalData: Goal[] = [
         id: 2,
         title: '掌握 Spring Security',
         priority: 'MEDIUM',
-        status: 'IN_PROGRESS', // Correct status
+        status: 'ONGOING', // Correct status
         progress: 30,
         createdAt: new Date('2025-04-02T09:00:00Z'), // Convert to Date object
         updatedAt: new Date('2025-04-10T16:45:00Z'), // Convert to Date object

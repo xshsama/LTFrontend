@@ -57,8 +57,7 @@ const statusColorMap: Record<string, string> = {
 
 // 状态中文名称映射
 const statusNameMap: Record<string, string> = {
-  ACTIVE: '进行中',
-  ARCHIVED: '已完成',
+  IN_PROGRESS: '进行中',
   COMPLETED: '已完成',
   BLOCKED: '已阻塞',
 }
@@ -277,6 +276,14 @@ const TasksTable: React.FC<TasksTableProps> = ({
         value,
       })),
       onFilter: (value, record) => record.type === value,
+    },
+    {
+      title: '权重',
+      dataIndex: 'weight',
+      key: 'weight',
+      width: 80,
+      sorter: (a, b) => (a.weight || 0) - (b.weight || 0),
+      render: (weight: number | undefined) => weight || '-', // Display '-' if weight is undefined or 0
     },
     {
       title: '状态',

@@ -3,7 +3,7 @@ export interface Goal {
     title: string
     description?: string
     targetDate?: Date
-    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+    status: 'ONGOING' | 'COMPLETED' | 'EXPIRED'
     priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
     progress?: number
     subjectId?: number
@@ -68,5 +68,5 @@ export interface Category {
     updatedAt: Date
 }
 
-export type GoalStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED'
+export type GoalStatus = 'ONGOING' | 'COMPLETED' | 'EXPIRED'
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'

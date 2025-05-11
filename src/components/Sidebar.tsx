@@ -3,7 +3,6 @@ import {
   BarChartOutlined,
   BookOutlined,
   PieChartOutlined,
-  TeamOutlined,
 } from '@ant-design/icons'
 import { Layout, Menu } from 'antd'
 import React, { useState } from 'react'
@@ -35,11 +34,11 @@ const menuItems = [
     icon: <BarChartOutlined />,
     label: <Link to="/task-progress">任务进度</Link>,
   },
-  {
-    key: '/community',
-    icon: <TeamOutlined />,
-    label: <Link to="/community">社区</Link>,
-  },
+  // { // Removed Community menu item
+  //   key: '/community',
+  //   icon: <TeamOutlined />,
+  //   label: <Link to="/community">社区</Link>,
+  // },
   // 已移除设置菜单项
 ]
 

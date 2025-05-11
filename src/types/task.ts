@@ -4,9 +4,10 @@ import { Goal } from './goals'
 export interface BaseTask {
     id: number
     title: string
-    status: 'ACTIVE' | 'ARCHIVED' | 'BLOCKED' | 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED' | 'OVERDUE'
+    status: 'ARCHIVED' | 'BLOCKED' | 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED' | 'OVERDUE' | 'PAUSED' // ACTIVE removed, PAUSED added
     type: 'STEP' | 'HABIT' | 'CREATIVE'
     completionDate?: Date
+    dueDate?: Date; // 添加任务截止日期字段
     createdAt: Date
     updatedAt: Date
     goalId: number
@@ -17,6 +18,8 @@ export interface BaseTask {
     actualTimeMinutes?: number
     estimatedTimeMinutes?: number
     priority?: 'HIGH' | 'MEDIUM' | 'LOW'
+    weight?: number // Added from goals.ts Task definition
+    studyHours?: number // Added from goals.ts Task definition
 }
 
 export interface StepTaskDetailDTO {
@@ -139,6 +142,7 @@ export interface CreateTaskRequest {
     title: string
     type: 'STEP' | 'HABIT' | 'CREATIVE'
     goalId: number
+    weight?: number // 添加任务权重
     tagIds?: number[]
     metadata?: string
 
@@ -158,7 +162,8 @@ export interface CreateTaskRequest {
 // 用于更新任务的请求类型
 export interface UpdateTaskRequest {
     title?: string
-    status?: 'ACTIVE' | 'ARCHIVED' | 'BLOCKED'
+    status?: 'ARCHIVED' | 'BLOCKED' | 'PAUSED' // ACTIVE removed, PAUSED added
+    weight?: number // 添加任务权重
     completionDate?: Date
     tagIds?: number[]
     metadata?: string
@@ -184,7 +189,7 @@ export interface UpdateTaskRequest {
 
 // 更新任务状态请求
 export interface UpdateStatusRequest {
-    status: 'ACTIVE' | 'ARCHIVED' | 'BLOCKED' | 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED' | 'OVERDUE'
+    status: 'ARCHIVED' | 'BLOCKED' | 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED' | 'OVERDUE' | 'PAUSED' // ACTIVE removed, PAUSED added
 }
 
 // 步骤型任务特有 - 更新步骤状态请求
