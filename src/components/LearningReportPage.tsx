@@ -1,10 +1,20 @@
 // frontend/src/components/LearningReportPage.tsx
 import {
+  AimOutlined, // Added icons
+  BarChartOutlined,
+  CarryOutOutlined,
+  CheckCircleOutlined,
+  HistoryOutlined,
+  ProjectOutlined,
+  RobotOutlined,
+} from '@ant-design/icons'
+import {
   Alert,
   Button,
   Card,
   Col,
   DatePicker,
+  Empty,
   List,
   Row,
   Space,
@@ -74,33 +84,58 @@ const LearningReportPage: React.FC = () => {
 
   const renderOverallStats = (stats: LearningReport['overallStats']) => (
     <Card
-      title="整体统计"
+      title={
+        <Space>
+          <BarChartOutlined style={{ color: '#1677ff' }} />
+          整体统计
+        </Space>
+      }
       style={{ marginBottom: 24 }}
       variant="outlined"
     >
-      <Row gutter={16}>
-        <Col span={6}>
+      <Row gutter={[16, 16]}>
+        <Col
+          xs={12}
+          sm={12}
+          md={6}
+        >
           <Statistic
             title="总目标数"
             value={stats.totalGoals}
+            prefix={<AimOutlined style={{ color: '#1677ff' }} />}
           />
         </Col>
-        <Col span={6}>
+        <Col
+          xs={12}
+          sm={12}
+          md={6}
+        >
           <Statistic
             title="已完成目标"
             value={stats.completedGoals}
+            prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
           />
         </Col>
-        <Col span={6}>
+        <Col
+          xs={12}
+          sm={12}
+          md={6}
+        >
           <Statistic
             title="总任务数"
             value={stats.totalTasks}
+            prefix={<CarryOutOutlined style={{ color: '#1677ff' }} />}
           />
         </Col>
-        <Col span={6}>
+        <Col
+          xs={12}
+          sm={12}
+          md={6}
+        >
           <Statistic
             title="已完成任务"
             value={stats.completedTasks}
+            prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
           />
         </Col>
       </Row>
@@ -109,7 +144,12 @@ const LearningReportPage: React.FC = () => {
 
   const renderSubjectStats = (subjectStats: SubjectReportStats[]) => (
     <Card
-      title="各学科进展"
+      title={
+        <Space>
+          <ProjectOutlined style={{ color: '#1677ff' }} />
+          各学科进展
+        </Space>
+      }
       style={{ marginBottom: 24 }}
       variant="outlined"
     >
@@ -130,7 +170,12 @@ const LearningReportPage: React.FC = () => {
 
   const renderRecentActivities = (activities: RecentActivityItem[]) => (
     <Card
-      title="近期活动"
+      title={
+        <Space>
+          <HistoryOutlined style={{ color: '#1677ff' }} />
+          近期活动
+        </Space>
+      }
       style={{ marginBottom: 24 }}
       variant="outlined"
     >
@@ -142,8 +187,17 @@ const LearningReportPage: React.FC = () => {
             <List.Item.Meta
               title={
                 <Text strong>
+                  {item.type === 'GOAL' ? (
+                    <AimOutlined style={{ marginRight: 8, color: '#1677ff' }} />
+                  ) : (
+                    <CarryOutOutlined
+                      style={{ marginRight: 8, color: '#13c2c2' }}
+                    />
+                  )}
                   {item.title}{' '}
-                  <Tag>{item.type === 'GOAL' ? '目标' : '任务'}</Tag>
+                  <Tag color={item.type === 'GOAL' ? 'blue' : 'cyan'}>
+                    {item.type === 'GOAL' ? '目标' : '任务'}
+                  </Tag>
                 </Text>
               }
               description={`状态: ${item.status} 日期: ${dayjs(
@@ -166,7 +220,12 @@ const LearningReportPage: React.FC = () => {
 
   const renderAISummary = (summary: string) => (
     <Card
-      title="AI总结与建议"
+      title={
+        <Space>
+          <RobotOutlined style={{ color: '#1677ff' }} />
+          AI总结与建议
+        </Space>
+      }
       style={{ marginBottom: 24 }}
       variant="outlined"
     >
@@ -230,6 +289,14 @@ const LearningReportPage: React.FC = () => {
           {/* {report.tasksCompletedOverTime && report.tasksCompletedOverTime.length > 0 && renderTasksOverTimeChart(report.tasksCompletedOverTime)} */}
           {report.aiSummary && renderAISummary(report.aiSummary)}
         </>
+      )}
+
+      {!report && !loading && !error && (
+        <Empty
+          description="暂无报告数据，请选择日期范围并点击“生成报告”按钮。"
+          style={{ marginTop: 40 }}
+          image={Empty.PRESENTED_IMAGE_SIMPLE} // Pass the constant directly
+        />
       )}
     </Space>
   )

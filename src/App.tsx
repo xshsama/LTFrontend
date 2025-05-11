@@ -43,8 +43,13 @@ const ThemedApp: React.FC = () => {
           theme === 'dark'
             ? antdTheme.darkAlgorithm
             : antdTheme.defaultAlgorithm,
-        // You can customize tokens further here if needed
-        // token: { colorPrimary: '#00b96b' },
+        // Customize tokens to introduce a cool color scheme
+        token: {
+          colorPrimary: '#1677ff', // Ant Design Blue - a cool primary color
+          // You can add more tokens here if needed, e.g.,
+          // colorInfo: '#1677ff', // Make info color same as primary
+          // borderRadius: 4,
+        },
       }}
     >
       {/* Routes are now top-level to handle different layouts */}
