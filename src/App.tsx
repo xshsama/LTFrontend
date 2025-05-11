@@ -13,6 +13,7 @@ import {
 import { ThemeProvider, useTheme } from './contexts/ThemeContext' // Import ThemeProvider and useTheme
 import MainLayout from './layouts/MainLayout'
 // import Community from './pages/Community'; // Removed Community import
+import AIAssistantPage from './pages/AIAssistantPage' // Import the new AI Assistant page
 import Courses from './pages/Courses'
 import Dashboard from './pages/Dashboard'
 import LoginPage from './pages/LoginPage' // Import LoginPage
@@ -94,6 +95,10 @@ const ThemedApp: React.FC = () => {
                 <Route
                   path="task-progress"
                   element={<TaskProgressPage />}
+                />
+                <Route
+                  path="ai-assistant" // Path for the new page
+                  element={<AIAssistantPage />}
                 />
                 {/* Default redirect for authenticated area */}
                 <Route
